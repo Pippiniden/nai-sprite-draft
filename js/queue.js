@@ -1,4 +1,4 @@
-import { apiGenerate, buildPayload } from './api.js';
+import { apiGenerate, buildPayload, prepareI2i } from './api.js';
 import { idb } from './db.js';
 import { renderAllExprRefToggles, renderExprStatus, renderExprThumbs, updateMissingBtn } from './expressions.js';
 import { bgSleep, keepAliveOff, keepAliveOn, notifyDone } from './keepalive.js';
@@ -106,7 +106,7 @@ export async function runQueue(){
       const seed=Math.floor(Math.random()*0xFFFFFFFF);
       const ch=proj.characters.find(c=>c.id===job.charId)||curChar(proj);
       const vIdx=pickVariantIdx(ex);
-      const payload=buildPayload(proj,ex,seed,ch,vIdx);
+      const payload=buildPayload(proj,ex,seed,ch,vIdx,await prepareI2i(proj,ex));
       const blob=await apiGenerate(payload);
       const rec={id:uid(),projectId:proj.id,charId:ch.id,exprId:ex.id,blob,seed,prompt:payload.input,width:proj.settings.width,height:proj.settings.height,model:proj.settings.model,adopted:false,held:false,createdAt:Date.now(),variantIdx:vIdx,variantLabel:ex.variants&&ex.variants.length>1?variantLabel(ex,vIdx):''};
       await idb.put('images',rec);

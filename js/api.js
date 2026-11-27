@@ -1,4 +1,4 @@
-import { vibeGetEncoded } from './refs.js';
+import { fitToSizeBase64, vibeGetEncoded } from './refs.js';
 import { QUALITY_TAGS, curChar, ensureCharacters, ensureRefArrays, state } from './state.js';
 import { composeParts } from './variants.js';
 import { zipFirstEntry } from './zip.js';
@@ -21,7 +21,23 @@ export async function callEncodeVibe(imageBase64, model, infoExtracted){
   return btoa(bin);
 }
 /* ==== NovelAI API ==== */
-export function buildPayload(project,expr,seed,forChar,variantIdx){
+/* The first img2img source enabled for this expression, or null. */
+export function activeI2i(project,expr){
+  const rc=expr?.refConfig||{};
+  return (project.i2iImages||[]).find(im=>rc[im.id]!==false)||null;
+}
+/* img2img needs the source at exactly the generation size, or the API rejects it.
+   Uploaded files rarely match, so scale-and-crop once per source × size and keep it in
+   memory (not in the project, which would bloat every save). */
+const i2iSized=new Map();
+export async function prepareI2i(project,expr){
+  const src=activeI2i(project,expr);if(!src)return null;
+  const{width:w,height:h}=project.settings;
+  const key=`${src.id}:${w}x${h}:${src.base64.length}`;
+  if(!i2iSized.has(key))i2iSized.set(key,await fitToSizeBase64(src.base64,w,h));
+  return i2iSized.get(key);
+}
+export function buildPayload(project,expr,seed,forChar,variantIdx,i2iBase64){
   const exprRefConfig=expr?.refConfig||{};
   const s=project.settings;ensureRefArrays(project);ensureCharacters(project);
   const ch=forChar||curChar(project);
@@ -69,15 +85,13 @@ export function buildPayload(project,expr,seed,forChar,variantIdx){
   }
   // i2i: find the first enabled i2i image for this expression
   let action='generate';
-  if(project.i2iImages){
-    const activeI2i=project.i2iImages.find(im=>rc[im.id]!==false);
-    if(activeI2i){
-      action='img2img';
-      params.image=activeI2i.base64;
-      params.strength=activeI2i.strength??0.5;
-      params.noise=activeI2i.noise??0;
-      params.extra_noise_seed=seed;
-    }
+  const i2iSrc=activeI2i(project,expr);
+  if(i2iSrc){
+    action='img2img';
+    params.image=i2iBase64||i2iSrc.base64;
+    params.strength=i2iSrc.strength??0.5;
+    params.noise=i2iSrc.noise??0;
+    params.extra_noise_seed=seed;
   }
   return{input:prompt,model:s.model,action,parameters:params};
 }

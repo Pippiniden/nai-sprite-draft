@@ -66,6 +66,26 @@ export function resizeAndPadBase64(base64){
     img.src=b64url(base64);
   });
 }
+/* Scale to cover w×h and centre-crop, returning PNG base64. Used for img2img, where a
+   black border (as precise reference uses) would be painted into the result. */
+export function fitToSizeBase64(base64,w,h){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        if(img.width===w&&img.height===h){res(base64);return;}
+        const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+        const ctx=cv.getContext('2d');ctx.imageSmoothingQuality='high';
+        const scale=Math.max(w/img.width,h/img.height);
+        const dw=img.width*scale,dh=img.height*scale;
+        ctx.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh);
+        res(cv.toDataURL('image/png').split(',')[1]);
+      }catch(e){rej(e);}
+    };
+    img.onerror=()=>rej(new Error('画像の読み込みに失敗しました'));
+    img.src=b64url(base64);
+  });
+}
 export async function refreshPreciseRefPadding(showToast){
   const p=state.project;if(!p)return;ensureRefArrays(p);
   if(!p.preciseRefs.length)return;
