@@ -4,6 +4,7 @@ import { openLightbox } from './lightbox.js';
 import { enqueue } from './queue.js';
 import { addI2iFromBlob, addRefFromBlob } from './refs.js';
 import { ensureRefArrays, saveProject, state } from './state.js';
+import { openThumbMenu } from './thumbmenu.js';
 import { toast } from './ui.js';
 import { $, $$, download, esc, refImgURL, sanitize } from './util.js';
 import { copyExprData, deserializeExpr, ensureExprShape, ensureExprShapes, newExpr, openPeek, renderExprExtra, serializeExpr } from './variants.js';
@@ -16,6 +17,23 @@ $$('.filter-bar button').forEach(btn=>{
     state.project?.expressions.forEach(ex=>renderExprThumbs(ex.id));
   };
 });
+/* ---- Thumbnail size ----
+   A browser-wide preference rather than a project setting: it depends on the screen,
+   not the sprites. Slider in the filter bar, or Ctrl+wheel over the thumbnails. */
+const THUMB_KEY='nai_thumb_size',THUMB_MIN=80,THUMB_MAX=320,THUMB_STEP=16;
+function setThumbSize(px){
+  const v=Math.min(THUMB_MAX,Math.max(THUMB_MIN,Math.round(+px||132)));
+  document.documentElement.style.setProperty('--thumb-w',v+'px');
+  $('#thumbSize').value=v;$('#thumbSizeVal').textContent=v+'px';
+  localStorage.setItem(THUMB_KEY,String(v));
+}
+setThumbSize(localStorage.getItem(THUMB_KEY)||132);
+$('#thumbSize').addEventListener('input',e=>setThumbSize(e.target.value));
+$('#exprList').addEventListener('wheel',e=>{
+  if(!(e.ctrlKey||e.metaKey)||!e.target.closest('.thumbs'))return;
+  e.preventDefault();   // otherwise the browser zooms the whole page
+  setThumbSize(+$('#thumbSize').value+(e.deltaY<0?THUMB_STEP:-THUMB_STEP));
+},{passive:false});
 export function matchFilter(im){
   if(state.filter==='all')return true;
   if(state.filter==='adopted')return im.adopted;
@@ -73,6 +91,15 @@ export function renderExpressions(){
       toast(`「${ex.name}」をテンプレートに保存しました`,'ok');
     };
     div.querySelector('.negprompt').addEventListener('input',e=>{ex.neg=e.target.value;saveProject();});
+    // Ctrl+Enter (⌘+Enter) in any field of this card queues just this expression, so a
+    // prompt tweak can be tried without leaving the keyboard for the 生成 button.
+    div.addEventListener('keydown',e=>{
+      if(e.key!=='Enter'||!(e.ctrlKey||e.metaKey)||e.isComposing)return;
+      if(!e.target.matches('textarea,input[type=text]'))return;
+      e.preventDefault();
+      toast(`「${ex.name}」を生成します`);
+      enqueue([ex.id]);
+    });
     div.querySelector('.gen').onclick=()=>enqueue([ex.id]);
     div.querySelector('.insert').onclick=()=>{
       const ne=newExpr();
@@ -241,7 +268,7 @@ export function renderExprThumbs(exprId){
   for(const im of imgs){
     const d=document.createElement('div');
     const cls=['thumb'];if(im.adopted)cls.push('adopted');else if(im.held)cls.push('held');
-    d.className=cls.join(' ');
+    d.className=cls.join(' ');d.dataset.iid=im.id;
     let badge='';if(im.adopted)badge='<span class="badge b-adopt">採用</span>';else if(im.held)badge='<span class="badge b-hold">保留</span>';
     const vlab=im.variantLabel||(im.variantIdx>0?'#'+(im.variantIdx+1):'');
     const vchip=vlab?`<span class="vlabel" title="使用したバリエーション">${esc(vlab)}</span>`:'';
@@ -253,6 +280,8 @@ export function renderExprThumbs(exprId){
     d.querySelector('.use-ref').onclick=()=>addRefFromBlob(im.blob,'precise');
     d.querySelector('.use-i2i').onclick=()=>addI2iFromBlob(im.blob);
     d.querySelector('.rm').onclick=()=>{if(confirm('この候補を削除します。よろしいですか？'))deleteImage(im.id);};
+    // the whole menu opens at the cursor, instead of aiming at the small hover buttons
+    d.addEventListener('contextmenu',e=>{e.preventDefault();openThumbMenu(im,e.clientX,e.clientY);});
     wrap.appendChild(d);
   }
 }

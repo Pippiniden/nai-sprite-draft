@@ -42,6 +42,7 @@ js/
   variants.js       バリエーション・無効化・送信プロンプトの確認
   library.js        表情テンプレート
   lightbox.js       拡大表示
+  thumbmenu.js      サムネイルの右クリックメニュー
   settings.js       左パネルの設定
   project.js        プロジェクト・キャラクター管理、バックアップ/復元
   bulk.js           プロンプト一括編集

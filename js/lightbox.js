@@ -58,7 +58,16 @@ export function renderLightbox(){
   $('#lbAdopt').classList.toggle('primary',!rec.adopted);
   $('#lbHold').innerHTML=(rec.held?'◆ 保留を解除':'◆ 保留')+' <kbd>S</kbd>';
 }
-export function closeLightbox(){$('#lightbox').classList.remove('show');}
+export function closeLightbox(){
+  const box=$('#lightbox');if(!box.classList.contains('show'))return;
+  box.classList.remove('show');
+  // ↑↓ may have carried the user across expressions; land the page on the one they
+  // ended on, at the image they were looking at, instead of where they started.
+  const card=document.querySelector(`.expr[data-id="${lb.exprId}"]`);if(!card)return;
+  const thumb=card.querySelector(`.thumb[data-iid="${lb.list[lb.idx]}"]`);
+  (thumb||card).scrollIntoView({block:'nearest'});
+  card.classList.remove('flash');void card.offsetWidth;card.classList.add('flash');
+}
 $('#lbClose').onclick=closeLightbox;
 export function showWrap(msg){
   const el=$('#lbWrap'),stage=document.querySelector('#lightbox .stage');
