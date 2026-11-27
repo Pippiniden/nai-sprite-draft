@@ -3,7 +3,7 @@ import { renderAllExprRefToggles } from './expressions.js';
 import { updateAnlasWarn } from './settings.js';
 import { ensureRefArrays, saveProject, state } from './state.js';
 import { openApiModal, toast } from './ui.js';
-import { $, b64url, blobToBase64, download, fileToBase64, sleep, uid } from './util.js';
+import { $, b64url, blobToBase64, download, fileToBase64, sleep, refImgURL, uid } from './util.js';
 
 export function vibeEncodeKey(model,ie){return model+':'+ie.toFixed(2);}
 export function vibeIsEncoded(vibe,model){
@@ -118,7 +118,7 @@ export function renderRefCardSet(cid,list,type){
     }
     const vibeCtl=isVibe?`<label>Info Extracted <span>${ie.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${ie}" data-field="infoExtracted">`:'';
     const preciseCtl=isVibe?'':`<label>Fidelity <span>${fid.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${fid}" data-field="fidelity"><label style="margin-top:5px;cursor:pointer"><span style="color:var(--muted)">画風も参照</span><input type="checkbox" class="style-aware" ${ref.styleAware?'checked':''} style="width:13px;height:13px;accent-color:var(--precise)"></label>`;
-    card.innerHTML=`<img src="${b64url(ref.base64)}" alt="参照"><button class="ref-rm" title="削除">✕</button>${badgeHtml}<div class="ref-info">${vibeCtl}<label>Strength <span>${st.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${st}" data-field="strength">${preciseCtl}${isVibe?'<div class="ref-tools"><button class="enc-btn">⚡ エンコード</button><button class="exp-btn">💾 書き出し</button></div>':''}</div>`;
+    card.innerHTML=`<img src="${refImgURL(ref)}" alt="参照"><button class="ref-rm" title="削除">✕</button>${badgeHtml}<div class="ref-info">${vibeCtl}<label>Strength <span>${st.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${st}" data-field="strength">${preciseCtl}${isVibe?'<div class="ref-tools"><button class="enc-btn">⚡ エンコード</button><button class="exp-btn">💾 書き出し</button></div>':''}</div>`;
     card.querySelector('.ref-rm').onclick=()=>{list.splice(i,1);saveProject();renderRefCards();updateAnlasWarn();renderAllExprRefToggles();};
     card.querySelectorAll('input[type=range]').forEach(sl=>{
       sl.addEventListener('input',()=>{ref[sl.dataset.field]=parseFloat(sl.value);sl.previousElementSibling.querySelector('span').textContent=ref[sl.dataset.field].toFixed(2);saveProject();});
@@ -255,7 +255,7 @@ export function renderI2iCards(){
   for(let i=0;i<p.i2iImages.length;i++){
     const ref=p.i2iImages[i];const st=ref.strength??0.5;const ns=ref.noise??0;
     const card=document.createElement('div');card.className='ref-card i2i';
-    card.innerHTML=`<img src="${b64url(ref.base64)}" alt="i2i元画像"><button class="ref-rm" title="削除">✕</button><div class="ref-info"><label>Strength <span>${st.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${st}" data-field="strength"><label>Noise <span>${ns.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${ns}" data-field="noise"></div>`;
+    card.innerHTML=`<img src="${refImgURL(ref)}" alt="i2i元画像"><button class="ref-rm" title="削除">✕</button><div class="ref-info"><label>Strength <span>${st.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${st}" data-field="strength"><label>Noise <span>${ns.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${ns}" data-field="noise"></div>`;
     card.querySelector('.ref-rm').onclick=()=>{p.i2iImages.splice(i,1);saveProject();renderRefCards();updateAnlasWarn();renderAllExprRefToggles();};
     card.querySelectorAll('input[type=range]').forEach(sl=>{sl.addEventListener('input',()=>{ref[sl.dataset.field]=parseFloat(sl.value);sl.previousElementSibling.querySelector('span').textContent=ref[sl.dataset.field].toFixed(2);saveProject();});});
     c.appendChild(card);

@@ -5,7 +5,7 @@ import { bgSleep, keepAliveOff, keepAliveOn, notifyDone } from './keepalive.js';
 import { encodeVibe, renderRefCards, vibeIsEncoded } from './refs.js';
 import { curChar, saveProject, state } from './state.js';
 import { askChoice, openApiModal, toast } from './ui.js';
-import { $, b64url, esc, sleep, uid } from './util.js';
+import { $, esc, refImgURL, sleep, uid } from './util.js';
 import { pickVariantIdx, variantLabel } from './variants.js';
 
 /* ==== Queue ==== */
@@ -34,7 +34,7 @@ export async function preflightVibes(p,exprIds){
   const rows=bad.map(({vibe,exprs})=>{
     const ie=(vibe.infoExtracted??0.6).toFixed(2);
     const names=exprs.slice(0,4).map(e=>esc(e.name)).join('、')+(exprs.length>4?` ほか${exprs.length-4}件`:'');
-    return `<li><img src="${b64url(vibe.base64)}" style="width:34px;height:34px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:8px">
+    return `<li><img src="${refImgURL(vibe)}" style="width:34px;height:34px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:8px">
       Info Extracted <code>${ie}</code> — 対象 ${exprs.length} 表情（${names}）</li>`;
   }).join('');
   const cost=bad.length*2;

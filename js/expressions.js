@@ -5,7 +5,7 @@ import { enqueue } from './queue.js';
 import { addI2iFromBlob, addRefFromBlob } from './refs.js';
 import { ensureRefArrays, saveProject, state } from './state.js';
 import { toast } from './ui.js';
-import { $, $$, b64url, download, esc, sanitize } from './util.js';
+import { $, $$, download, esc, refImgURL, sanitize } from './util.js';
 import { copyExprData, deserializeExpr, ensureExprShape, ensureExprShapes, newExpr, openPeek, renderExprExtra, serializeExpr } from './variants.js';
 
 /* ---- Filter ---- */
@@ -192,7 +192,7 @@ export function renderExprRefToggles(ex){
     const btn=document.createElement('button');
     btn.className=`expr-ref-toggle ${type} ${enabled?'on':'off'}`;
     btn.title=`${type==='vibe'?'バイブス':type==='precise'?'精密参照':'img2img'} ${label}（クリックで切替）`;
-    btn.innerHTML=`<img src="${b64url(ref.base64)}" alt="">${label}`;
+    btn.innerHTML=`<img src="${refImgURL(ref)}" alt="">${label}`;
     btn.onclick=()=>{
       ex.refConfig[ref.id]=!enabled;saveProject();renderExprRefToggles(ex);
     };
@@ -245,7 +245,7 @@ export function renderExprThumbs(exprId){
     let badge='';if(im.adopted)badge='<span class="badge b-adopt">採用</span>';else if(im.held)badge='<span class="badge b-hold">保留</span>';
     const vlab=im.variantLabel||(im.variantIdx>0?'#'+(im.variantIdx+1):'');
     const vchip=vlab?`<span class="vlabel" title="使用したバリエーション">${esc(vlab)}</span>`:'';
-    d.innerHTML=`${badge}${vchip}<span class="seed" title="クリックでコピー">${im.seed}</span><img src="${imgURL(im)}" alt=""><div class="tools"><button class="adopt" title="${im.adopted?'採用を取り消す':'採用する'}">★</button><button class="hold" title="${im.held?'保留を解除':'保留にする'}">◆</button><button class="use-ref" title="📌 精密参照に登録">📌</button><button class="use-i2i" title="🖼 i2i元画像に登録">🖼</button><button class="rm danger" title="削除">🗑</button></div>`;
+    d.innerHTML=`${badge}${vchip}<span class="seed" title="クリックでコピー">${im.seed}</span><img src="${imgURL(im)}" alt="" loading="lazy" decoding="async"><div class="tools"><button class="adopt" title="${im.adopted?'採用を取り消す':'採用する'}">★</button><button class="hold" title="${im.held?'保留を解除':'保留にする'}">◆</button><button class="use-ref" title="📌 精密参照に登録">📌</button><button class="use-i2i" title="🖼 i2i元画像に登録">🖼</button><button class="rm danger" title="削除">🗑</button></div>`;
     d.querySelector('img').onclick=()=>openLightbox(im.id);
     d.querySelector('.seed').onclick=e=>{e.stopPropagation();navigator.clipboard?.writeText(String(im.seed));toast('シード値をコピーしました: '+im.seed,'ok');};
     d.querySelector('.adopt').onclick=async()=>{const r=await adoptImage(im.id);if(r==='cleared')toast('採用を取り消しました');};
