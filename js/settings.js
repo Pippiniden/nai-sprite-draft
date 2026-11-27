@@ -36,7 +36,8 @@ export function refWarnText(){
 export function updateAnlasWarn(){
   const s=state.project?.settings;if(!s)return;
   const hasRefs=(state.project.vibes?.length||0)+(state.project.preciseRefs?.length||0)+(state.project.i2iImages?.length||0)>0;
-  const over=(s.width*s.height>1216*832)||s.steps>28||hasRefs;
+  // Opus free tier: one image, no base image, up to 1024x1024 worth of pixels, ≤28 steps.
+  const over=(s.width*s.height>1024*1024)||s.steps>28||hasRefs;
   $('#anlasWarn').textContent=hasRefs?refWarnText():'⚠ この画像サイズ・ステップ数は Opus の無料枠を超えるため、Anlas を消費する可能性があります。';
   $('#anlasWarn').classList.toggle('show',over);
 }
