@@ -446,15 +446,21 @@
       <label class="mask-size">ぼかし <input type="range" id="paintSoft" min="0" max="100" value="30"> <span id="paintSoftVal">30%</span></label>
       <label class="mask-size chk"><input type="checkbox" id="paintToMask"> 描いた所をマスクにも追加</label>
     </div>
+    <div class="mask-tools layer-bar" id="layerBar">
+      <span class="layer-label">レイヤー</span>
+      <span id="layerList" class="layer-list"></span>
+      <button id="layerAdd" title="新しいレイヤーを上に追加">＋ 追加</button>
+      <button id="layerDel" title="選択中のレイヤーを削除">🗑</button>
+      <label class="mask-size">レイヤー不透明度 <input type="range" id="layerOpacity" min="0" max="100" value="100"> <span id="layerOpacityVal">100%</span></label>
+    </div>
     <p class="hint" id="maskModeHint"></p>
     <div class="mask-stage" id="maskStage">
       <img id="maskImage" alt="" draggable="false">
-      <canvas id="paintCanvas"></canvas>
       <canvas id="strokeCanvas"></canvas>
       <canvas id="maskCanvas"></canvas>
       <div class="mask-cursor" id="maskCursor"></div>
     </div>
-    <p class="hint">右ドラッグで消去／<kbd>[</kbd> <kbd>]</kbd> または Ctrl+ホイールで太さ変更／ペイントは保存すると元画像に焼き込まれます</p>
+    <p class="hint">右ドラッグで消去／<kbd>[</kbd> <kbd>]</kbd> または Ctrl+ホイールで太さ変更／ペイントは元画像とは別のレイヤーに保存され、送信時だけ表示中のレイヤーを合成します</p>
     <div class="btnrow"><button id="maskCancel">キャンセル <kbd>Esc</kbd></button><button id="maskSave" class="primary">保存 <kbd>Ctrl+Enter</kbd></button></div>
   </div>
 </div>

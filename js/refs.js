@@ -87,6 +87,20 @@ export function fitToSizeBase64(base64,w,h){
     img.src=b64url(base64);
   });
 }
+/* The source with its visible paint layers on top, as PNG base64. Layers are kept at
+   the source's own resolution, so this is a straight stack. */
+export const visibleLayers=ref=>(ref.paintLayers||[]).filter(l=>l.visible!==false&&l.base64);
+export function compositeLayersBase64(ref){
+  const layers=visibleLayers(ref);
+  if(!layers.length)return Promise.resolve(ref.base64);
+  const load=b=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('画像の読み込みに失敗しました'));i.src=b64url(b);});
+  return Promise.all([load(ref.base64),...layers.map(l=>load(l.base64))]).then(([base,...ims])=>{
+    const cv=document.createElement('canvas');cv.width=base.width;cv.height=base.height;
+    const ctx=cv.getContext('2d');ctx.drawImage(base,0,0);
+    ims.forEach((im,i)=>{ctx.globalAlpha=layers[i].opacity??1;ctx.drawImage(im,0,0,cv.width,cv.height);});
+    return cv.toDataURL('image/png').split(',')[1];
+  });
+}
 /* An inpaint mask, stored at the source image's resolution, cropped the same way as
    fitToSizeBase64 and snapped to the 8 px grid the model works in: a block is repainted
    if any pixel in it was painted. Repainted blocks are opaque white, kept ones are
@@ -325,7 +339,7 @@ export function renderI2iCards(){
     const sf=inpaint?'inpaintStrength':'strength';
     const st=inpaint?(ref.inpaintStrength??1):(ref.strength??0.5);
     const card=document.createElement('div');card.className='ref-card i2i'+(inpaint?' inpaint':'');
-    card.innerHTML=`<div class="ref-thumb"><img src="${refImgURL(ref)}" alt="i2i元画像">${inpaint?`<div class="mask-overlay" style="--m:url(${b64url(ref.mask)})"></div>`:''}</div><button class="ref-rm" title="削除">✕</button>${inpaint?'<span class="encode-badge inpaint">インペイント</span>':''}<div class="ref-info"><label>${inpaint?'Inpaint Strength':'Strength'} <span>${st.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${st}" data-field="${sf}"><label>Noise <span>${ns.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${ns}" data-field="noise"><div class="ref-tools"><button class="paint-btn" title="色を描き込む">🎨 ペイント</button><button class="mask-btn" title="インペイント用のマスクを描く">🩹 マスク</button>${inpaint?'<button class="mask-clear">マスク解除</button>':''}</div></div>`;
+    card.innerHTML=`<div class="ref-thumb"><img src="${refImgURL(ref)}" alt="i2i元画像">${visibleLayers(ref).map(l=>`<img class="paint-layer" src="${refImgURL(l)}" alt="" style="opacity:${l.opacity??1}">`).join('')}${inpaint?`<div class="mask-overlay" style="--m:url(${b64url(ref.mask)})"></div>`:''}${ref.paintLayers?.length?`<span class="encode-badge paint">🎨 ${ref.paintLayers.length}</span>`:''}</div><button class="ref-rm" title="削除">✕</button>${inpaint?'<span class="encode-badge inpaint">インペイント</span>':''}<div class="ref-info"><label>${inpaint?'Inpaint Strength':'Strength'} <span>${st.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${st}" data-field="${sf}"><label>Noise <span>${ns.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${ns}" data-field="noise"><div class="ref-tools"><button class="paint-btn" title="色を描き込む">🎨 ペイント</button><button class="mask-btn" title="インペイント用のマスクを描く">🩹 マスク</button>${inpaint?'<button class="mask-clear">マスク解除</button>':''}</div></div>`;
     card.querySelector('.ref-rm').onclick=()=>{p.i2iImages.splice(i,1);saveProject();renderRefCards();updateAnlasWarn();renderAllExprRefToggles();};
     card.querySelector('.paint-btn').onclick=()=>openMaskEditor(ref,{mode:'paint'});
     card.querySelector('.mask-btn').onclick=()=>openMaskEditor(ref,{mode:'mask'});

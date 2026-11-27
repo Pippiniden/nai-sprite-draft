@@ -354,3 +354,13 @@ legend{padding:0 8px;color:var(--accent);font-size:11px;letter-spacing:.18em;fon
 .ref-card .ref-thumb{position:relative}
 .ref-card .ref-thumb .mask-overlay{position:absolute;inset:0;background:rgb(255,64,110);opacity:.5;pointer-events:none;-webkit-mask:var(--m) center/cover no-repeat;mask:var(--m) center/cover no-repeat}
 .ref-card .encode-badge.inpaint{background:var(--i2i);color:#1a0d05}
+.ref-card .ref-thumb .paint-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.ref-card .encode-badge.paint{top:auto;bottom:4px;left:4px;background:rgba(0,0,0,.65);color:#fff}
+.layer-bar{margin-top:0}
+.layer-label{font-size:12px;color:var(--muted)}
+.layer-list{display:inline-flex;gap:4px;flex-wrap:wrap}
+.layer-list .layer{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;font-size:11.5px}
+.layer-list .layer.on{border-color:var(--i2i);color:var(--i2i);background:color-mix(in srgb,var(--i2i) 14%,transparent)}
+.layer-list .layer .eye{opacity:.9;cursor:pointer}
+.layer-list .layer.hidden-layer .eye{opacity:.35}
+.layer-list .layer.hidden-layer .nm{text-decoration:line-through;opacity:.6}

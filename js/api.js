@@ -1,4 +1,4 @@
-import { fitMaskToSizeBase64, fitToSizeBase64, vibeGetEncoded } from './refs.js';
+import { compositeLayersBase64, fitMaskToSizeBase64, fitToSizeBase64, vibeGetEncoded } from './refs.js';
 import { QUALITY_TAGS, curChar, ensureCharacters, ensureRefArrays, state } from './state.js';
 import { composeParts } from './variants.js';
 import { zipFirstEntry } from './zip.js';
@@ -28,15 +28,17 @@ export function activeI2i(project,expr){
 }
 /* img2img needs the source at exactly the generation size, or the API rejects it.
    Uploaded files rarely match, so scale-and-crop once per source × size and keep it in
-   memory (not in the project, which would bloat every save). An inpaint mask gets the
+   memory (not in the project, which would bloat every save). Visible paint layers are
+   merged onto the source first. An inpaint mask gets the
    same crop so it stays aligned with the image. Returns {image, mask|null} or null. */
 const i2iSized=new Map();
 export async function prepareI2i(project,expr){
   const src=activeI2i(project,expr);if(!src)return null;
   const{width:w,height:h}=project.settings;
-  const key=`${src.id}:${w}x${h}:${src.base64.length}:${src.imgRev||0}:${src.mask?.length||0}:${src.maskRev||0}`;
+  const key=`${src.id}:${w}x${h}:${src.base64.length}:${src.imgRev||0}:${src.paintRev||0}:${src.mask?.length||0}:${src.maskRev||0}`;
   if(!i2iSized.has(key))i2iSized.set(key,{
-    image:await fitToSizeBase64(src.base64,w,h),
+    // paint layers stay separate in the project; only what is sent is flattened
+    image:await fitToSizeBase64(await compositeLayersBase64(src),w,h),
     mask:src.mask?await fitMaskToSizeBase64(src.mask,w,h):null,
   });
   return i2iSized.get(key);
