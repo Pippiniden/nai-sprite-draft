@@ -2,7 +2,7 @@ import { matchFilter } from './expressions.js';
 import { adoptImage, deleteImage, holdImage, imgURL } from './images.js';
 import { addI2iFromBlob, addRefFromBlob } from './refs.js';
 import { state } from './state.js';
-import { toast } from './ui.js';
+import { askChoice, toast } from './ui.js';
 import { $ } from './util.js';
 
 /* ---- Lightbox ---- */
@@ -89,7 +89,16 @@ $('#lbSeedCopy').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.i
 $('#lbUseRef').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.idx]);if(rec)addRefFromBlob(rec.blob,'precise');};
 $('#lbUseI2i').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.idx]);if(rec)addI2iFromBlob(rec.blob);};
 $('#lbDelete').onclick=async()=>{
-  const id=lb.list[lb.idx];await deleteImage(id);lb.list.splice(lb.idx,1);
+  const id=lb.list[lb.idx];
+  const rec=state.images.find(i=>i.id===id);if(!rec)return;
+  // Deletion is permanent, so ask first. Focus lands on 削除, so D → Enter stays quick.
+  const mark=rec.adopted?'（採用済みの画像です）':rec.held?'（保留中の画像です）':'';
+  const ok=await askChoice('画像を削除',`<p>この画像を削除します${mark}。削除した画像は元に戻せません。</p>`,[
+    {value:null,label:'キャンセル'},
+    {value:'del',label:'削除',cls:'danger'}
+  ]);
+  if(ok!=='del'||lb.list[lb.idx]!==id)return;
+  await deleteImage(id);lb.list.splice(lb.idx,1);
   if(!lb.list.length){
     // this expression is now empty — carry on with the next one if there is one
     const others=state.project.expressions.some(e=>e.id!==lb.exprId&&lbBuildList(e.id).length);
@@ -100,6 +109,8 @@ $('#lbDelete').onclick=async()=>{
 };
 document.addEventListener('keydown',e=>{
   if(!$('#lightbox').classList.contains('show'))return;
+  // a dialog on top (e.g. the delete confirmation) owns the keyboard
+  if(document.querySelector('.modal-backdrop.show'))return;
   if(e.ctrlKey||e.metaKey||e.altKey)return;
   const k=e.key.toLowerCase();
   const hit=k=>{e.preventDefault();};
@@ -113,7 +124,7 @@ document.addEventListener('keydown',e=>{
       hit(); $('#lbAdopt').click(); break;          // 採用
     case 's': case 'h':
       hit(); $('#lbHold').click(); break;           // 保留
-    case 'd': case 'delete': case 'backspace':
+    case 'd': case 'delete':                          // Backspace is too easy to hit by mistake
       hit(); $('#lbDelete').click(); break;         // 削除
     case 'c':
       hit(); $('#lbSeedCopy').click(); break;       // シードをコピー
