@@ -122,7 +122,7 @@
         <button class="bulk-ref" data-kind="i2i" data-on="0">全表情でオフ</button>
       </div>
       <div class="ref-cards" id="i2iCards"></div>
-      <p class="hint">元画像をもとに再生成します。Strength が高いほど元画像から離れ、Noise で追加ノイズを調整します。表情ごとにオン・オフでき、オンの表情では先頭の 1 枚が使われます。元画像は生成サイズに合わせて自動で拡大縮小し、はみ出した部分は中央を基準に切り取ります。</p>
+      <p class="hint">元画像をもとに再生成します。Strength が高いほど元画像から離れ、Noise で追加ノイズを調整します。表情ごとにオン・オフでき、オンの表情では先頭の 1 枚が使われます。元画像は生成サイズに合わせて自動で拡大縮小し、はみ出した部分は中央を基準に切り取ります。「🖌 インペイント」でマスクを描くと、塗った部分だけを描き直すインペイントになります（Anlas を消費します）。</p>
     </div>
   </fieldset>
 
@@ -253,6 +253,7 @@
     <button id="lbSeedCopy" title="この画像のシード値をコピー">シード <kbd>C</kbd></button>
     <button id="lbUseRef" title="精密参照に登録">📌 精密参照</button>
     <button id="lbUseI2i" title="img2img の元画像に登録">🖼 i2i</button>
+    <button id="lbInpaint" title="i2i 元画像に登録してマスクを描く">🖌 インペイント</button>
     <button id="lbDelete" class="danger">削除 <kbd>D</kbd></button>
     <button id="lbClose">閉じる <kbd>Esc</kbd></button>
   </div>
@@ -423,6 +424,28 @@
     <h3>リトライジッター</h3>
     <p>ON にすると 429 レート制限時の待機時間（15秒から始まり、続けて制限されると 30秒・60秒と延び、6回続くと生成を中止します）にランダムな秒数を加えます。加算範囲は小数点第2位まで自由に設定でき（例: 0.50〜8.00秒）、複数タブで同時に回す場合の衝突回避に有効です。</p>
     <div class="btnrow"><button id="btnHelpClose" class="primary">閉じる</button></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="maskModal">
+  <div class="modal mask-modal">
+    <h2>インペイント マスク</h2>
+    <p>描き直したい部分を塗ってください。塗った部分だけが新しく生成され、残りは元画像のまま残ります。送信時は 8px 単位に丸められます。</p>
+    <div class="mask-tools">
+      <button id="maskBrush" title="ブラシ (B)">🖌 ブラシ <kbd>B</kbd></button>
+      <button id="maskEraser" title="消しゴム (E)／右ドラッグでも消せます">⌫ 消しゴム <kbd>E</kbd></button>
+      <label class="mask-size">太さ <input type="range" id="maskSize" min="2" max="512" step="1"> <span id="maskSizeVal"></span></label>
+      <button id="maskUndo" title="元に戻す (Ctrl+Z)">↶ 戻す</button>
+      <button id="maskInvert" title="塗りを反転 (I)">反転</button>
+      <button id="maskClear">全消去</button>
+    </div>
+    <div class="mask-stage" id="maskStage">
+      <img id="maskImage" alt="" draggable="false">
+      <canvas id="maskCanvas"></canvas>
+      <div class="mask-cursor" id="maskCursor"></div>
+    </div>
+    <p class="hint">右ドラッグで消去／<kbd>[</kbd> <kbd>]</kbd> または Ctrl+ホイールで太さ変更</p>
+    <div class="btnrow"><button id="maskCancel">キャンセル <kbd>Esc</kbd></button><button id="maskSave" class="primary">保存 <kbd>Ctrl+Enter</kbd></button></div>
   </div>
 </div>
 

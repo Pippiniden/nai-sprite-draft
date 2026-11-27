@@ -3,7 +3,7 @@
      projects : project settings, prompts and expressions. Reference images are kept
                 here only as metadata (strength, toggles…) — see `refdata`.
      refdata  : the heavy part of each reference image (base64, padded copy, vibe
-                encodings), keyed `projectId:refId`. Split out in v3 because the project
+                encodings, inpaint mask), keyed `projectId:refId`. Split out in v3 because the project
                 record is rewritten on every keystroke, and dragging several MB of images
                 along with each save made typing in a prompt stall.
      images   : generated images. */
@@ -28,11 +28,11 @@ export async function dbInit(){db=await dbOpen();return db;}
 
 /* ---- project persistence with reference images split out ---- */
 const REF_LISTS=['vibes','preciseRefs','i2iImages'];
-const HEAVY=['base64','paddedBase64','encoded'];
+const HEAVY=['base64','paddedBase64','encoded','mask'];
 /* What was last written to `refdata`, so a save only rewrites references that changed. */
 const refSig=new Map();
 const refKey=(pid,rid)=>pid+':'+rid;
-const sigOf=r=>`${r.base64?.length||0}|${r.paddedBase64?.length||0}|${Object.keys(r.encoded||{}).sort().join(',')}`;
+const sigOf=r=>`${r.base64?.length||0}|${r.paddedBase64?.length||0}|${Object.keys(r.encoded||{}).sort().join(',')}|${r.mask?.length||0}:${r.maskRev||0}`;
 const refsOf=p=>REF_LISTS.flatMap(k=>p[k]||[]);
 
 /* Write a project: the lean record always, and only the reference data that changed

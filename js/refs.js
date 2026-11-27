@@ -2,6 +2,7 @@ import { callEncodeVibe } from './api.js';
 import { renderAllExprRefToggles } from './expressions.js';
 import { updateAnlasWarn } from './settings.js';
 import { ensureRefArrays, saveProject, state } from './state.js';
+import { openMaskEditor } from './maskeditor.js';
 import { openApiModal, toast } from './ui.js';
 import { $, b64url, blobToBase64, download, fileToBase64, sleep, refImgURL, uid } from './util.js';
 
@@ -86,6 +87,37 @@ export function fitToSizeBase64(base64,w,h){
     img.src=b64url(base64);
   });
 }
+/* An inpaint mask, stored at the source image's resolution, cropped the same way as
+   fitToSizeBase64 and snapped to the 8 px grid the model works in: a block is repainted
+   if any pixel in it was painted. Repainted blocks are opaque white, kept ones are
+   transparent black. */
+export function fitMaskToSizeBase64(maskB64,w,h){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+        const ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=false;
+        const scale=Math.max(w/img.width,h/img.height);
+        const dw=img.width*scale,dh=img.height*scale;
+        ctx.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh);
+        const src=ctx.getImageData(0,0,w,h).data;
+        const out=ctx.createImageData(w,h),o=out.data;
+        for(let by=0;by<h;by+=8)for(let bx=0;bx<w;bx+=8){
+          const ey=Math.min(by+8,h),ex=Math.min(bx+8,w);
+          let hit=false;
+          for(let y=by;y<ey&&!hit;y++)for(let x=bx;x<ex;x++)if(src[(y*w+x)*4+3]>16){hit=true;break;}
+          if(!hit)continue;
+          for(let y=by;y<ey;y++)for(let x=bx;x<ex;x++){const i=(y*w+x)*4;o[i]=o[i+1]=o[i+2]=o[i+3]=255;}
+        }
+        ctx.putImageData(out,0,0);
+        res(cv.toDataURL('image/png').split(',')[1]);
+      }catch(e){rej(e);}
+    };
+    img.onerror=()=>rej(new Error('マスクの読み込みに失敗しました'));
+    img.src=b64url(maskB64);
+  });
+}
 export async function refreshPreciseRefPadding(showToast){
   const p=state.project;if(!p)return;ensureRefArrays(p);
   if(!p.preciseRefs.length)return;
@@ -137,13 +169,46 @@ export function renderRefCardSet(cid,list,type){
     }
     c.appendChild(card);
   }
-  const addBtn=document.createElement('div');addBtn.className='ref-add';addBtn.textContent='＋ 画像を追加';
-  addBtn.onclick=()=>pickRefImage(type);
-  addBtn.addEventListener('dragover',e=>{e.preventDefault();addBtn.style.borderColor='var(--accent)';});
-  addBtn.addEventListener('dragleave',()=>{addBtn.style.borderColor='';});
-  addBtn.addEventListener('drop',async e=>{e.preventDefault();addBtn.style.borderColor='';const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))await addRefFromFile(f,type);});
-  c.appendChild(addBtn);
+  c.appendChild(makeAddBox('＋ 画像を追加',type,f=>addRefFromFile(f,type)));
 }
+/* ---- Add box: click to pick, drop a file, or paste from the clipboard ----
+   Ctrl+V pastes into the box under the mouse (or the focused one); the 📋 button
+   reads the clipboard directly. */
+let hoverAddBox=null;
+function makeAddBox(label,type,add){
+  const box=document.createElement('div');box.className='ref-add';box.tabIndex=0;
+  box.title='クリックで選択／ドロップ／ホバー中に Ctrl+V で貼り付け';
+  box.innerHTML=`<span>${label}</span><button class="ref-paste" type="button" title="クリップボードから貼り付け">📋 貼り付け</button>`;
+  box._addImage=add;
+  box.onclick=()=>pickRefImage(type);
+  box.querySelector('.ref-paste').onclick=e=>{e.stopPropagation();pasteFromClipboardApi(add);};
+  box.addEventListener('mouseenter',()=>{hoverAddBox=box;});
+  box.addEventListener('mouseleave',()=>{if(hoverAddBox===box)hoverAddBox=null;});
+  box.addEventListener('dragover',e=>{e.preventDefault();box.style.borderColor='var(--accent)';});
+  box.addEventListener('dragleave',()=>{box.style.borderColor='';});
+  box.addEventListener('drop',async e=>{e.preventDefault();box.style.borderColor='';const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))await add(f);});
+  return box;
+}
+async function pasteFromClipboardApi(add){
+  if(!navigator.clipboard?.read){toast('このブラウザではボタンから貼り付けできません。枠にマウスを乗せて Ctrl+V を押してください','err');return;}
+  try{
+    for(const item of await navigator.clipboard.read()){
+      const t=item.types.find(x=>x.startsWith('image/'));
+      if(t){await add(await item.getType(t));return;}
+    }
+    toast('クリップボードに画像がありません','err');
+  }catch(err){toast('クリップボードを読めませんでした: '+err.message,'err');}
+}
+document.addEventListener('paste',async e=>{
+  const box=(document.activeElement?.classList?.contains('ref-add')&&document.activeElement)||(hoverAddBox?.isConnected&&hoverAddBox);
+  if(!box)return;
+  const tag=document.activeElement?.tagName;
+  if(document.activeElement!==box&&(tag==='INPUT'||tag==='TEXTAREA'||document.activeElement?.isContentEditable))return;
+  const f=[...(e.clipboardData?.files||[])].find(x=>x.type.startsWith('image/'));
+  if(!f){toast('クリップボードに画像がありません','err');return;}
+  e.preventDefault();
+  await box._addImage(f);
+});
 export let pendingRefType=null;
 export function pickRefImage(type){pendingRefType=type;const inp=$('#refFileInput');inp.value='';inp.click();}
 $('#refFileInput').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f||!pendingRefType)return;if(pendingRefType==='i2i')await addI2iFromFile(f);else await addRefFromFile(f,pendingRefType);});
@@ -253,26 +318,35 @@ export function renderI2iCards(){
   const p=state.project;if(!p)return;ensureRefArrays(p);
   const c=document.getElementById('i2iCards');c.innerHTML='';
   for(let i=0;i<p.i2iImages.length;i++){
-    const ref=p.i2iImages[i];const st=ref.strength??0.5;const ns=ref.noise??0;
-    const card=document.createElement('div');card.className='ref-card i2i';
-    card.innerHTML=`<img src="${refImgURL(ref)}" alt="i2i元画像"><button class="ref-rm" title="削除">✕</button><div class="ref-info"><label>Strength <span>${st.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${st}" data-field="strength"><label>Noise <span>${ns.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${ns}" data-field="noise"></div>`;
+    const ref=p.i2iImages[i];const ns=ref.noise??0;
+    /* With a mask this source is an inpaint: the strength slider then drives
+       inpaintStrength (default 1.0 = repaint the masked area fully). */
+    const inpaint=!!ref.mask;
+    const sf=inpaint?'inpaintStrength':'strength';
+    const st=inpaint?(ref.inpaintStrength??1):(ref.strength??0.5);
+    const card=document.createElement('div');card.className='ref-card i2i'+(inpaint?' inpaint':'');
+    card.innerHTML=`<div class="ref-thumb"><img src="${refImgURL(ref)}" alt="i2i元画像">${inpaint?`<div class="mask-overlay" style="--m:url(${b64url(ref.mask)})"></div>`:''}</div><button class="ref-rm" title="削除">✕</button>${inpaint?'<span class="encode-badge inpaint">インペイント</span>':''}<div class="ref-info"><label>${inpaint?'Inpaint Strength':'Strength'} <span>${st.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${st}" data-field="${sf}"><label>Noise <span>${ns.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${ns}" data-field="noise"><div class="ref-tools"><button class="mask-btn">🖌 ${inpaint?'マスク編集':'インペイント'}</button>${inpaint?'<button class="mask-clear">マスク解除</button>':''}</div></div>`;
     card.querySelector('.ref-rm').onclick=()=>{p.i2iImages.splice(i,1);saveProject();renderRefCards();updateAnlasWarn();renderAllExprRefToggles();};
+    card.querySelector('.mask-btn').onclick=()=>openMaskEditor(ref);
+    const mc=card.querySelector('.mask-clear');
+    if(mc)mc.onclick=()=>{delete ref.mask;ref.maskRev=(ref.maskRev||0)+1;saveProject();renderRefCards();renderAllExprRefToggles();toast('マスクを外しました（通常の img2img に戻ります）');};
     card.querySelectorAll('input[type=range]').forEach(sl=>{sl.addEventListener('input',()=>{ref[sl.dataset.field]=parseFloat(sl.value);sl.previousElementSibling.querySelector('span').textContent=ref[sl.dataset.field].toFixed(2);saveProject();});});
     c.appendChild(card);
   }
-  const addBtn=document.createElement('div');addBtn.className='ref-add';addBtn.textContent='＋ i2i元画像を追加';
-  addBtn.onclick=()=>pickRefImage('i2i');
-  addBtn.addEventListener('dragover',e=>{e.preventDefault();addBtn.style.borderColor='var(--accent)';});
-  addBtn.addEventListener('dragleave',()=>{addBtn.style.borderColor='';});
-  addBtn.addEventListener('drop',async e=>{e.preventDefault();addBtn.style.borderColor='';const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))await addI2iFromFile(f);});
-  c.appendChild(addBtn);
+  c.appendChild(makeAddBox('＋ i2i元画像を追加','i2i',f=>addI2iFromFile(f)));
 }
 export async function addI2iFromFile(file){
   const p=state.project;if(!p)return;ensureRefArrays(p);
   try{const b64=await fileToBase64(file);p.i2iImages.push({id:uid(),base64:b64,strength:0.5,noise:0});saveProject();renderRefCards();updateAnlasWarn();renderAllExprRefToggles();toast('img2img の元画像を追加しました','ok');}catch(err){toast('読み込みに失敗しました: '+err.message,'err');}
 }
-export async function addI2iFromBlob(blob){
-  const p=state.project;if(!p)return;ensureRefArrays(p);
-  const b64=await blobToBase64(blob);p.i2iImages.push({id:uid(),base64:b64,strength:0.5,noise:0});
-  saveProject();renderRefCards();updateAnlasWarn();renderAllExprRefToggles();toast('img2img の元画像に登録しました','ok');
+export async function addI2iFromBlob(blob,quiet){
+  const p=state.project;if(!p)return null;ensureRefArrays(p);
+  const b64=await blobToBase64(blob);const entry={id:uid(),base64:b64,strength:0.5,noise:0};p.i2iImages.push(entry);
+  saveProject();renderRefCards();updateAnlasWarn();renderAllExprRefToggles();if(!quiet)toast('img2img の元画像に登録しました','ok');
+  return entry;
+}
+/* Register a generated image as an i2i source and go straight to painting its mask. */
+export async function inpaintFromBlob(blob){
+  const entry=await addI2iFromBlob(blob,true);
+  if(entry)openMaskEditor(entry,{discardIfEmpty:true});
 }

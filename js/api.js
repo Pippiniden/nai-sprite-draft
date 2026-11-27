@@ -1,4 +1,4 @@
-import { fitToSizeBase64, vibeGetEncoded } from './refs.js';
+import { fitMaskToSizeBase64, fitToSizeBase64, vibeGetEncoded } from './refs.js';
 import { QUALITY_TAGS, curChar, ensureCharacters, ensureRefArrays, state } from './state.js';
 import { composeParts } from './variants.js';
 import { zipFirstEntry } from './zip.js';
@@ -28,16 +28,22 @@ export function activeI2i(project,expr){
 }
 /* img2img needs the source at exactly the generation size, or the API rejects it.
    Uploaded files rarely match, so scale-and-crop once per source × size and keep it in
-   memory (not in the project, which would bloat every save). */
+   memory (not in the project, which would bloat every save). An inpaint mask gets the
+   same crop so it stays aligned with the image. Returns {image, mask|null} or null. */
 const i2iSized=new Map();
 export async function prepareI2i(project,expr){
   const src=activeI2i(project,expr);if(!src)return null;
   const{width:w,height:h}=project.settings;
-  const key=`${src.id}:${w}x${h}:${src.base64.length}`;
-  if(!i2iSized.has(key))i2iSized.set(key,await fitToSizeBase64(src.base64,w,h));
+  const key=`${src.id}:${w}x${h}:${src.base64.length}:${src.mask?.length||0}:${src.maskRev||0}`;
+  if(!i2iSized.has(key))i2iSized.set(key,{
+    image:await fitToSizeBase64(src.base64,w,h),
+    mask:src.mask?await fitMaskToSizeBase64(src.mask,w,h):null,
+  });
   return i2iSized.get(key);
 }
-export function buildPayload(project,expr,seed,forChar,variantIdx,i2iBase64){
+/* Inpainting runs on a separate model; V4/V4.5 each have one named `<model>-inpainting`. */
+export const inpaintModel=model=>model+'-inpainting';
+export function buildPayload(project,expr,seed,forChar,variantIdx,i2iPrep){
   const exprRefConfig=expr?.refConfig||{};
   const s=project.settings;ensureRefArrays(project);ensureCharacters(project);
   const ch=forChar||curChar(project);
@@ -84,16 +90,29 @@ export function buildPayload(project,expr,seed,forChar,variantIdx,i2iBase64){
     params.director_reference_information_extracted=prActive.map(()=>1);
   }
   // i2i: find the first enabled i2i image for this expression
-  let action='generate';
+  let action='generate',model=s.model;
   const i2iSrc=activeI2i(project,expr);
-  if(i2iSrc){
+  if(i2iSrc&&i2iSrc.mask){
+    /* Inpaint: white in the mask is repainted, the rest is kept. Below 1.0 the masked
+       area is only partly denoised, which the official client sends as an extra
+       img2img block alongside inpaintImg2ImgStrength. */
+    action='infill';model=inpaintModel(s.model);
+    const st=i2iSrc.inpaintStrength??1;
+    params.image=i2iPrep?.image||i2iSrc.base64;
+    params.mask=i2iPrep?.mask||i2iSrc.mask;
+    params.strength=st;
+    params.inpaintImg2ImgStrength=st;
+    if(st<1)params.img2img={strength:st,color_correct:true};
+    params.noise=i2iSrc.noise??0;
+    params.extra_noise_seed=seed;
+  }else if(i2iSrc){
     action='img2img';
-    params.image=i2iBase64||i2iSrc.base64;
+    params.image=i2iPrep?.image||i2iSrc.base64;
     params.strength=i2iSrc.strength??0.5;
     params.noise=i2iSrc.noise??0;
     params.extra_noise_seed=seed;
   }
-  return{input:prompt,model:s.model,action,parameters:params};
+  return{input:prompt,model,action,parameters:params};
 }
 export async function apiGenerate(payload){
   const res=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+state.apiKey},body:JSON.stringify(payload)});
