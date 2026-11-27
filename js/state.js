@@ -14,6 +14,12 @@ export function ensureRefArrays(p){
     if(r.fidelity===undefined)r.fidelity=0.5;
     if(r.strength===undefined)r.strength=1;
   }
+  /* Backups made before v21 dropped reference ids, so restored references all shared
+     the id `undefined` and every per-expression toggle hit all of them at once.
+     Give each one its own id; the stale `undefined` toggles are meaningless, so drop them. */
+  let repaired=false;
+  for(const r of [...p.vibes,...p.preciseRefs,...p.i2iImages])if(!r.id){r.id=uid();repaired=true;}
+  if(repaired)for(const e of (p.expressions||[]))if(e.refConfig)delete e.refConfig.undefined;
 }
 export function ensureSettings(p){
   if(!p.settings)p.settings={};

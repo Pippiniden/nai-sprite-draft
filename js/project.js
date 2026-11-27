@@ -111,7 +111,7 @@ $('#btnDelProject').onclick=async()=>{
 $('#btnBackup').onclick=()=>{
   if(!state.project)return;const p=state.project;
   ensureCharacters(p);
-  const data={type:'nai-sprite-backup',version:4,name:p.name,basePrompt:p.basePrompt,negPrompt:p.negPrompt,characters:p.characters.map(c=>({name:c.name,prompt:c.prompt,exportName:c.exportName||'',neg:c.neg||''})),settings:p.settings,vibes:p.vibes.map(v=>({base64:v.base64,infoExtracted:v.infoExtracted,strength:v.strength,encoded:v.encoded||{}})),preciseRefs:p.preciseRefs.map(r=>({base64:r.base64,strength:r.strength,fidelity:r.fidelity,styleAware:!!r.styleAware})),i2iImages:p.i2iImages||[],expressions:p.expressions.map(serializeExpr)};
+  const data={type:'nai-sprite-backup',version:4,name:p.name,basePrompt:p.basePrompt,negPrompt:p.negPrompt,characters:p.characters.map(c=>({name:c.name,prompt:c.prompt,exportName:c.exportName||'',neg:c.neg||''})),settings:p.settings,vibes:p.vibes.map(v=>({id:v.id,base64:v.base64,infoExtracted:v.infoExtracted,strength:v.strength,encoded:v.encoded||{}})),preciseRefs:p.preciseRefs.map(r=>({id:r.id,base64:r.base64,strength:r.strength,fidelity:r.fidelity,styleAware:!!r.styleAware})),i2iImages:p.i2iImages||[],expressions:p.expressions.map(serializeExpr)};
   download(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),sanitize(p.name)+'_backup.json');
   toast('バックアップを書き出しました','ok');
 };
@@ -130,10 +130,18 @@ $('#restoreFile').addEventListener('change',async e=>{
       p.characters=[{id:uid(),name:'キャラ1',prompt:j.charPrompt,exportName:'',neg:''}];p.currentCharId=p.characters[0].id;
     }
     if(j.settings)Object.assign(p.settings,j.settings);
-    if(j.vibes)p.vibes=j.vibes;
-    if(j.preciseRefs)p.preciseRefs=j.preciseRefs;
-    if(j.i2iImages)p.i2iImages=j.i2iImages;
-    if(Array.isArray(j.expressions))p.expressions=j.expressions.map(deserializeExpr);
+    // Every reference needs its own id: per-expression on/off toggles are keyed by it.
+    // Backups older than v21 carry none, so mint fresh ones for those.
+    const withIds=list=>Array.isArray(list)?list.map(r=>({...r,id:r.id||uid()})):[];
+    if(j.vibes)p.vibes=withIds(j.vibes);
+    if(j.preciseRefs)p.preciseRefs=withIds(j.preciseRefs);
+    if(j.i2iImages)p.i2iImages=withIds(j.i2iImages);
+    if(Array.isArray(j.expressions)){
+      p.expressions=j.expressions.map(deserializeExpr);
+      // keep only toggles that still point at a restored reference
+      const known=new Set([...p.vibes,...p.preciseRefs,...p.i2iImages].map(r=>r.id));
+      for(const ex of p.expressions)for(const k of Object.keys(ex.refConfig||{}))if(!known.has(k))delete ex.refConfig[k];
+    }
     state.projects.push(p);await idb.put('projects',p);await loadProject(p.id);
     toast('バックアップから復元しました','ok');
   }catch(err){toast('復元に失敗しました: '+err.message,'err');}
