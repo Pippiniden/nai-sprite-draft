@@ -122,7 +122,7 @@
         <button class="bulk-ref" data-kind="i2i" data-on="0">全表情でオフ</button>
       </div>
       <div class="ref-cards" id="i2iCards"></div>
-      <p class="hint">元画像をもとに再生成します。Strength が高いほど元画像から離れ、Noise で追加ノイズを調整します。表情ごとにオン・オフでき、オンの表情では先頭の 1 枚が使われます。元画像は生成サイズに合わせて自動で拡大縮小し、はみ出した部分は中央を基準に切り取ります。「🖌 インペイント」でマスクを描くと、塗った部分だけを描き直すインペイントになります（Anlas を消費します）。</p>
+      <p class="hint">元画像をもとに再生成します。Strength が高いほど元画像から離れ、Noise で追加ノイズを調整します。表情ごとにオン・オフでき、オンの表情では先頭の 1 枚が使われます。元画像は生成サイズに合わせて自動で拡大縮小し、はみ出した部分は中央を基準に切り取ります。「🎨 ペイント」で色を描き込むと、その色をヒントに img2img できます（涙の水色など）。「🩹 マスク」で範囲を塗ると、そこだけを描き直すインペイントになります。両方を組み合わせることもできます（どちらも Anlas を消費します）。</p>
     </div>
   </fieldset>
 
@@ -253,7 +253,7 @@
     <button id="lbSeedCopy" title="この画像のシード値をコピー">シード <kbd>C</kbd></button>
     <button id="lbUseRef" title="精密参照に登録">📌 精密参照</button>
     <button id="lbUseI2i" title="img2img の元画像に登録">🖼 i2i</button>
-    <button id="lbInpaint" title="i2i 元画像に登録してマスクを描く">🖌 インペイント</button>
+    <button id="lbInpaint" title="i2i 元画像に登録して、色の描き込みやインペイント用マスクを描く">🎨 編集</button>
     <button id="lbDelete" class="danger">削除 <kbd>D</kbd></button>
     <button id="lbClose">閉じる <kbd>Esc</kbd></button>
   </div>
@@ -429,22 +429,32 @@
 
 <div class="modal-backdrop" id="maskModal">
   <div class="modal mask-modal">
-    <h2>インペイント マスク</h2>
-    <p>描き直したい部分を塗ってください。塗った部分だけが新しく生成され、残りは元画像のまま残ります。送信時は 8px 単位に丸められます。</p>
+    <h2>画像を編集</h2>
     <div class="mask-tools">
+      <div class="seg"><button id="modePaint" title="ペイント (P)">🎨 ペイント <kbd>P</kbd></button><button id="modeMask" title="インペイント用マスク (M)">🩹 マスク <kbd>M</kbd></button></div>
       <button id="maskBrush" title="ブラシ (B)">🖌 ブラシ <kbd>B</kbd></button>
       <button id="maskEraser" title="消しゴム (E)／右ドラッグでも消せます">⌫ 消しゴム <kbd>E</kbd></button>
-      <label class="mask-size">太さ <input type="range" id="maskSize" min="2" max="512" step="1"> <span id="maskSizeVal"></span></label>
+      <label class="mask-size">太さ <input type="range" id="maskSize" min="1" max="512" step="1"> <span id="maskSizeVal"></span></label>
       <button id="maskUndo" title="元に戻す (Ctrl+Z)">↶ 戻す</button>
-      <button id="maskInvert" title="塗りを反転 (I)">反転</button>
-      <button id="maskClear">全消去</button>
+      <span id="maskOnlyTools"><button id="maskInvert" title="塗りを反転 (I)">反転</button></span>
+      <button id="maskClear" title="今のモードの描き込みを全部消す">全消去</button>
     </div>
+    <div class="mask-tools" id="paintTools">
+      <span id="paintSwatches" class="swatches"></span>
+      <input type="color" id="paintColor" title="色を選ぶ（Alt+クリックで画像から拾う）">
+      <label class="mask-size">不透明度 <input type="range" id="paintAlpha" min="5" max="100" value="70"> <span id="paintAlphaVal">70%</span></label>
+      <label class="mask-size">ぼかし <input type="range" id="paintSoft" min="0" max="100" value="30"> <span id="paintSoftVal">30%</span></label>
+      <label class="mask-size chk"><input type="checkbox" id="paintToMask"> 描いた所をマスクにも追加</label>
+    </div>
+    <p class="hint" id="maskModeHint"></p>
     <div class="mask-stage" id="maskStage">
       <img id="maskImage" alt="" draggable="false">
+      <canvas id="paintCanvas"></canvas>
+      <canvas id="strokeCanvas"></canvas>
       <canvas id="maskCanvas"></canvas>
       <div class="mask-cursor" id="maskCursor"></div>
     </div>
-    <p class="hint">右ドラッグで消去／<kbd>[</kbd> <kbd>]</kbd> または Ctrl+ホイールで太さ変更</p>
+    <p class="hint">右ドラッグで消去／<kbd>[</kbd> <kbd>]</kbd> または Ctrl+ホイールで太さ変更／ペイントは保存すると元画像に焼き込まれます</p>
     <div class="btnrow"><button id="maskCancel">キャンセル <kbd>Esc</kbd></button><button id="maskSave" class="primary">保存 <kbd>Ctrl+Enter</kbd></button></div>
   </div>
 </div>

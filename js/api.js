@@ -34,7 +34,7 @@ const i2iSized=new Map();
 export async function prepareI2i(project,expr){
   const src=activeI2i(project,expr);if(!src)return null;
   const{width:w,height:h}=project.settings;
-  const key=`${src.id}:${w}x${h}:${src.base64.length}:${src.mask?.length||0}:${src.maskRev||0}`;
+  const key=`${src.id}:${w}x${h}:${src.base64.length}:${src.imgRev||0}:${src.mask?.length||0}:${src.maskRev||0}`;
   if(!i2iSized.has(key))i2iSized.set(key,{
     image:await fitToSizeBase64(src.base64,w,h),
     mask:src.mask?await fitMaskToSizeBase64(src.mask,w,h):null,

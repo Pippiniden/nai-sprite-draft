@@ -325,9 +325,10 @@ export function renderI2iCards(){
     const sf=inpaint?'inpaintStrength':'strength';
     const st=inpaint?(ref.inpaintStrength??1):(ref.strength??0.5);
     const card=document.createElement('div');card.className='ref-card i2i'+(inpaint?' inpaint':'');
-    card.innerHTML=`<div class="ref-thumb"><img src="${refImgURL(ref)}" alt="i2i元画像">${inpaint?`<div class="mask-overlay" style="--m:url(${b64url(ref.mask)})"></div>`:''}</div><button class="ref-rm" title="削除">✕</button>${inpaint?'<span class="encode-badge inpaint">インペイント</span>':''}<div class="ref-info"><label>${inpaint?'Inpaint Strength':'Strength'} <span>${st.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${st}" data-field="${sf}"><label>Noise <span>${ns.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${ns}" data-field="noise"><div class="ref-tools"><button class="mask-btn">🖌 ${inpaint?'マスク編集':'インペイント'}</button>${inpaint?'<button class="mask-clear">マスク解除</button>':''}</div></div>`;
+    card.innerHTML=`<div class="ref-thumb"><img src="${refImgURL(ref)}" alt="i2i元画像">${inpaint?`<div class="mask-overlay" style="--m:url(${b64url(ref.mask)})"></div>`:''}</div><button class="ref-rm" title="削除">✕</button>${inpaint?'<span class="encode-badge inpaint">インペイント</span>':''}<div class="ref-info"><label>${inpaint?'Inpaint Strength':'Strength'} <span>${st.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${st}" data-field="${sf}"><label>Noise <span>${ns.toFixed(2)}</span></label><input type="range" min="0" max="1" step="0.05" value="${ns}" data-field="noise"><div class="ref-tools"><button class="paint-btn" title="色を描き込む">🎨 ペイント</button><button class="mask-btn" title="インペイント用のマスクを描く">🩹 マスク</button>${inpaint?'<button class="mask-clear">マスク解除</button>':''}</div></div>`;
     card.querySelector('.ref-rm').onclick=()=>{p.i2iImages.splice(i,1);saveProject();renderRefCards();updateAnlasWarn();renderAllExprRefToggles();};
-    card.querySelector('.mask-btn').onclick=()=>openMaskEditor(ref);
+    card.querySelector('.paint-btn').onclick=()=>openMaskEditor(ref,{mode:'paint'});
+    card.querySelector('.mask-btn').onclick=()=>openMaskEditor(ref,{mode:'mask'});
     const mc=card.querySelector('.mask-clear');
     if(mc)mc.onclick=()=>{delete ref.mask;ref.maskRev=(ref.maskRev||0)+1;saveProject();renderRefCards();renderAllExprRefToggles();toast('マスクを外しました（通常の img2img に戻ります）');};
     card.querySelectorAll('input[type=range]').forEach(sl=>{sl.addEventListener('input',()=>{ref[sl.dataset.field]=parseFloat(sl.value);sl.previousElementSibling.querySelector('span').textContent=ref[sl.dataset.field].toFixed(2);saveProject();});});
@@ -345,8 +346,9 @@ export async function addI2iFromBlob(blob,quiet){
   saveProject();renderRefCards();updateAnlasWarn();renderAllExprRefToggles();if(!quiet)toast('img2img の元画像に登録しました','ok');
   return entry;
 }
-/* Register a generated image as an i2i source and go straight to painting its mask. */
-export async function inpaintFromBlob(blob){
+/* Register a generated image as an i2i source and open it in the editor straight away
+   (mode 'paint' or 'mask'). It is dropped again if the editor is left with no change. */
+export async function editFromBlob(blob,mode){
   const entry=await addI2iFromBlob(blob,true);
-  if(entry)openMaskEditor(entry,{discardIfEmpty:true});
+  if(entry)openMaskEditor(entry,{discardIfEmpty:true,mode});
 }

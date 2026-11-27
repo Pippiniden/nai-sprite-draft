@@ -334,7 +334,21 @@ legend{padding:0 8px;color:var(--accent);font-size:11px;letter-spacing:.18em;fon
 .mask-size span{font-family:var(--mono);font-size:11px;min-width:44px;color:var(--text)}
 .mask-stage{position:relative;width:fit-content;margin:0 auto;overflow:hidden;border:1px solid var(--line2);border-radius:6px;background:#000;touch-action:none}
 .mask-stage img{display:block;max-width:100%;max-height:68vh;user-select:none;pointer-events:none}
-.mask-stage canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.55;cursor:none}
+.mask-stage canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.mask-stage #maskCanvas{opacity:.55;cursor:none;pointer-events:auto}
+.mask-stage[data-mode=paint] #maskCanvas{opacity:.22}
+.mask-tools .seg{display:inline-flex}
+.mask-tools .seg button{border-radius:0}
+.mask-tools .seg button:first-child{border-radius:6px 0 0 6px}
+.mask-tools .seg button:last-child{border-radius:0 6px 6px 0;margin-left:-1px}
+.mask-tools .seg button.on{background:color-mix(in srgb,var(--i2i) 18%,transparent)}
+.mask-tools[hidden],#maskOnlyTools[hidden]{display:none}
+.swatches{display:inline-flex;gap:4px}
+.swatches button{width:20px;height:20px;padding:0;border-radius:50%;border:2px solid var(--line2)}
+.swatches button.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--panel),0 0 0 3px var(--accent)}
+#paintColor{width:30px;height:24px;padding:0;border:1px solid var(--line2);border-radius:4px;background:none;cursor:pointer}
+.mask-size.chk{cursor:pointer}
+.mask-cursor.pick{border-style:dotted;background:none!important}
 .mask-cursor{position:absolute;display:none;border:1.5px solid #fff;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.6);pointer-events:none}
 .mask-cursor.erase{border-style:dashed}
 .ref-card .ref-thumb{position:relative}

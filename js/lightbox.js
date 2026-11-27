@@ -1,6 +1,6 @@
 import { matchFilter } from './expressions.js';
 import { adoptImage, deleteImage, holdImage, imgURL } from './images.js';
-import { addI2iFromBlob, addRefFromBlob, inpaintFromBlob } from './refs.js';
+import { addI2iFromBlob, addRefFromBlob, editFromBlob } from './refs.js';
 import { state } from './state.js';
 import { askChoice, toast } from './ui.js';
 import { $ } from './util.js';
@@ -97,7 +97,7 @@ $('#lbHold').onclick=async()=>{await holdImage(lb.list[lb.idx]);renderLightbox()
 $('#lbSeedCopy').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.idx]);if(rec){navigator.clipboard?.writeText(String(rec.seed));toast('シード値をコピーしました: '+rec.seed,'ok');}};
 $('#lbUseRef').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.idx]);if(rec)addRefFromBlob(rec.blob,'precise');};
 $('#lbUseI2i').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.idx]);if(rec)addI2iFromBlob(rec.blob);};
-$('#lbInpaint').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.idx]);if(rec)inpaintFromBlob(rec.blob);};
+$('#lbInpaint').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.idx]);if(rec)editFromBlob(rec.blob,'paint');};
 $('#lbDelete').onclick=async()=>{
   const id=lb.list[lb.idx];
   const rec=state.images.find(i=>i.id===id);if(!rec)return;

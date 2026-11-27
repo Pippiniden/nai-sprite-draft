@@ -32,7 +32,7 @@ const HEAVY=['base64','paddedBase64','encoded','mask'];
 /* What was last written to `refdata`, so a save only rewrites references that changed. */
 const refSig=new Map();
 const refKey=(pid,rid)=>pid+':'+rid;
-const sigOf=r=>`${r.base64?.length||0}|${r.paddedBase64?.length||0}|${Object.keys(r.encoded||{}).sort().join(',')}|${r.mask?.length||0}:${r.maskRev||0}`;
+const sigOf=r=>`${r.base64?.length||0}|${r.paddedBase64?.length||0}|${Object.keys(r.encoded||{}).sort().join(',')}|${r.mask?.length||0}:${r.maskRev||0}:${r.imgRev||0}`;
 const refsOf=p=>REF_LISTS.flatMap(k=>p[k]||[]);
 
 /* Write a project: the lean record always, and only the reference data that changed

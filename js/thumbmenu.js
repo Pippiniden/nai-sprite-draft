@@ -1,6 +1,6 @@
 import { adoptImage, deleteImage, holdImage } from './images.js';
 import { openLightbox } from './lightbox.js';
-import { addI2iFromBlob, addRefFromBlob, inpaintFromBlob } from './refs.js';
+import { addI2iFromBlob, addRefFromBlob, editFromBlob } from './refs.js';
 import { toast } from './ui.js';
 
 /* ---- Thumbnail context menu ----
@@ -17,7 +17,8 @@ export function openThumbMenu(im,x,y){
     null,
     ['ref','📌 精密参照に登録'],
     ['i2i','🖼 i2i の元画像に登録'],
-    ['inpaint','🖌 インペイント（マスクを描く）'],
+    ['paint','🎨 描き込んで i2i'],
+    ['inpaint','🩹 インペイント（マスクを描く）'],
     ['seed','シード値をコピー'],
     null,
     ['del','🗑 削除','danger'],
@@ -39,7 +40,8 @@ export function openThumbMenu(im,x,y){
       case 'hold':await holdImage(im.id);break;
       case 'ref':addRefFromBlob(im.blob,'precise');break;
       case 'i2i':addI2iFromBlob(im.blob);break;
-      case 'inpaint':inpaintFromBlob(im.blob);break;
+      case 'paint':editFromBlob(im.blob,'paint');break;
+      case 'inpaint':editFromBlob(im.blob,'mask');break;
       case 'seed':navigator.clipboard?.writeText(String(im.seed));toast('シード値をコピーしました: '+im.seed,'ok');break;
       case 'del':if(confirm('この候補を削除します。よろしいですか？'))deleteImage(im.id);break;
     }
