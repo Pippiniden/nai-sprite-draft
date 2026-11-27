@@ -1,4 +1,4 @@
-import { idb } from './db.js';
+import { writeProject } from './db.js';
 import { toast } from './ui.js';
 import { uid } from './util.js';
 
@@ -70,4 +70,4 @@ export function newProject(name){
     expressions:DEFAULT_EXPRS.map(([n,p])=>({id:uid(),name:n,prompt:p,neg:'',variants:[{id:uid(),label:'',prompt:p}],variantMode:'first',varCursor:0,suppress:'',suppressOn:false,suppressScope:'basechar',suppressPartial:false,refConfig:{}}))};
 }
 export let saveTimer;
-export function saveProject(){if(!state.project)return;state.project.updatedAt=Date.now();clearTimeout(saveTimer);saveTimer=setTimeout(()=>idb.put('projects',state.project).catch(e=>toast('保存に失敗しました: '+e,'err')),350);}
+export function saveProject(){if(!state.project)return;state.project.updatedAt=Date.now();clearTimeout(saveTimer);saveTimer=setTimeout(()=>writeProject(state.project).catch(e=>toast('保存に失敗しました: '+e,'err')),350);}

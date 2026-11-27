@@ -1,5 +1,5 @@
 import { apiGenerate, buildPayload, prepareI2i } from './api.js';
-import { idb } from './db.js';
+import { idb, writeProject } from './db.js';
 import { renderAllExprRefToggles, renderExprStatus, renderExprThumbs, updateMissingBtn } from './expressions.js';
 import { bgSleep, keepAliveOff, keepAliveOn, notifyDone } from './keepalive.js';
 import { encodeVibe, renderRefCards, vibeIsEncoded } from './refs.js';
@@ -117,7 +117,7 @@ export async function runQueue(){
         updateMissingBtn();
       }else{
         // saveProject() only writes the open project; persist the variant cursor here
-        idb.put('projects',proj).catch(()=>{});
+        writeProject(proj).catch(()=>{});
       }
       queue.jobs.shift();queue.done++;rateLimited=0;
     }catch(e){

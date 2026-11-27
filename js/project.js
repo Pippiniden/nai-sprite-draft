@@ -1,4 +1,4 @@
-import { idb } from './db.js';
+import { deleteProjectData, idb, writeProject } from './db.js';
 import { renderExpressions } from './expressions.js';
 import { deleteImage } from './images.js';
 import { refreshPreciseRefPadding, renderRefCards } from './refs.js';
@@ -89,21 +89,21 @@ export async function loadProject(id){
   refreshPreciseRefPadding().then(()=>renderRefCards());
 }
 $('#projectSelect').addEventListener('change',e=>loadProject(e.target.value));
-$('#btnNewProject').onclick=async()=>{const name=prompt('新しいプロジェクトの名前を入力してください','新規プロジェクト');if(name===null)return;const p=newProject(name.trim()||'新規プロジェクト');state.projects.push(p);await idb.put('projects',p);await loadProject(p.id);};
+$('#btnNewProject').onclick=async()=>{const name=prompt('新しいプロジェクトの名前を入力してください','新規プロジェクト');if(name===null)return;const p=newProject(name.trim()||'新規プロジェクト');state.projects.push(p);await writeProject(p);await loadProject(p.id);};
 $('#btnDupProject').onclick=async()=>{
   if(!state.project)return;const src=state.project;
   const p=JSON.parse(JSON.stringify(src));
   p.id=uid();p.name=src.name+' のコピー';p.createdAt=p.updatedAt=Date.now();
   p.expressions=src.expressions.map(e=>copyExprData(e));
-  state.projects.push(p);await idb.put('projects',p);await loadProject(p.id);
+  state.projects.push(p);await writeProject(p);await loadProject(p.id);
   toast('プロジェクトを複製しました（生成済みの画像はコピーされません）','ok');
 };
 $('#btnDelProject').onclick=async()=>{
   if(!state.project)return;const p=state.project;
   if(!confirm(`プロジェクト「${p.name}」を削除します。よろしいですか？\n\n生成済みの画像 ${state.allImages.length} 枚（全キャラクター分）もあわせて削除されます。この操作は取り消せません。`))return;
   for(const im of[...state.allImages])await idb.del('images',im.id);
-  await idb.del('projects',p.id);state.projects=state.projects.filter(x=>x.id!==p.id);
-  if(!state.projects.length){const np=newProject('新規プロジェクト');state.projects.push(np);await idb.put('projects',np);}
+  await deleteProjectData(p.id);state.projects=state.projects.filter(x=>x.id!==p.id);
+  if(!state.projects.length){const np=newProject('新規プロジェクト');state.projects.push(np);await writeProject(np);}
   await loadProject(state.projects[0].id);toast('削除しました','ok');
 };
 
@@ -142,7 +142,7 @@ $('#restoreFile').addEventListener('change',async e=>{
       const known=new Set([...p.vibes,...p.preciseRefs,...p.i2iImages].map(r=>r.id));
       for(const ex of p.expressions)for(const k of Object.keys(ex.refConfig||{}))if(!known.has(k))delete ex.refConfig[k];
     }
-    state.projects.push(p);await idb.put('projects',p);await loadProject(p.id);
+    state.projects.push(p);await writeProject(p);await loadProject(p.id);
     toast('バックアップから復元しました','ok');
   }catch(err){toast('復元に失敗しました: '+err.message,'err');}
 });
