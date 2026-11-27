@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprite Draft for NovelAI</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="mark"></span><b>SPRITE DRAFT</b><span>for NovelAI V4.5</span></div>
+  <div class="grow"></div>
+  <select id="projectSelect" aria-label="プロジェクト選択"></select>
+  <button id="btnNewProject">新規</button>
+  <button id="btnDupProject">複製</button>
+  <button id="btnDelProject" class="danger">削除</button>
+  <button id="btnBackup">💾 バックアップ</button>
+  <button id="btnRestore">📂 復元</button>
+  <button id="btnApiKey">APIキー</button>
+  <button id="btnHelp">使い方</button>
+</header>
+
+<main>
+<aside>
+  <fieldset>
+    <legend>PROJECT</legend>
+    <div class="field"><label for="inpProjectName">プロジェクト名</label>
+      <input type="text" id="inpProjectName" style="width:100%"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>GENERATION</legend>
+    <div class="row"><label for="selModel">モデル</label>
+      <select id="selModel" style="flex:1">
+        <option value="nai-diffusion-4-5-full">NAI Diffusion V4.5 Full</option>
+        <option value="nai-diffusion-4-5-curated">NAI Diffusion V4.5 Curated</option>
+      </select></div>
+    <div class="row"><label for="selSize">サイズ</label>
+      <select id="selSize" style="flex:1">
+        <option value="1024x1024">1024 × 1024（正方形）</option>
+        <option value="832x1216">832 × 1216（縦・立ち絵向け）</option>
+        <option value="1216x832">1216 × 832（横）</option>
+        <option value="custom">カスタム解像度</option>
+      </select></div>
+    <div class="row" id="rowCustomSize" style="display:none">
+      <label>解像度</label>
+      <input type="number" id="inpWidth" min="64" max="2048" step="64"> ×
+      <input type="number" id="inpHeight" min="64" max="2048" step="64">
+      <span class="unit">64の倍数</span>
+    </div>
+    <div class="row"><label for="inpSteps">ステップ</label><input type="number" id="inpSteps" min="1" max="50">
+      <label for="inpScale" style="min-width:0">Guidance</label><input type="number" id="inpScale" min="0" max="10" step="0.1"></div>
+    <div class="row"><label for="selSampler">サンプラー</label>
+      <select id="selSampler" style="flex:1">
+        <option value="k_euler_ancestral">Euler Ancestral</option>
+        <option value="k_euler">Euler</option>
+        <option value="k_dpmpp_2s_ancestral">DPM++ 2S Ancestral</option>
+        <option value="k_dpmpp_2m_sde">DPM++ 2M SDE</option>
+        <option value="k_dpmpp_2m">DPM++ 2M</option>
+        <option value="k_dpmpp_sde">DPM++ SDE</option>
+      </select></div>
+    <div class="row"><label for="selNoise">Noise</label>
+      <select id="selNoise" style="flex:1">
+        <option value="karras">karras</option>
+        <option value="native">native</option>
+        <option value="exponential">exponential</option>
+        <option value="polyexponential">polyexponential</option>
+      </select></div>
+    <div class="row"><label for="inpRescale">CFG Rescale</label><input type="number" id="inpRescale" min="0" max="1" step="0.05"></div>
+    <div class="row"><label for="inpCount">生成枚数/表情</label><input type="number" id="inpCount" min="1" max="50">
+      <label for="inpDelay" style="min-width:0">間隔</label><input type="number" id="inpDelay" min="0" max="60" step="0.5"><span class="unit">秒</span></div>
+    <div class="row"><label for="selOrder">生成順序</label>
+      <select id="selOrder" style="flex:1">
+        <option value="grouped">表情ごとにまとめて（AAA → BBB）</option>
+        <option value="roundrobin">1 枚ずつ交互に（ABC → ABC）</option>
+      </select></div>
+    <p class="hint" id="orderHint" style="margin:-2px 0 6px 106px"></p>
+    <div class="row"><label for="chkQuality">品質タグ</label>
+      <input type="checkbox" id="chkQuality"> <span class="unit">プロンプトの末尾に自動で付け足す</span></div>
+    <div class="row"><label for="chkBgKeep">バックグラウンド維持</label>
+      <input type="checkbox" id="chkBgKeep"> <span class="unit">タブを離れても速度を保つ</span></div>
+    <p class="hint" id="bgKeepHint"></p>
+    <div class="row"><label for="chkJitter">リトライジッター</label>
+      <input type="checkbox" id="chkJitter"> <span class="unit">再試行の待機時間をランダムにずらす</span></div>
+    <div class="jitter-range" id="jitterRange">
+      <label>加算範囲</label>
+      <input type="number" id="inpJitterMin" min="0" max="120" step="0.01"> 〜
+      <input type="number" id="inpJitterMax" min="0" max="120" step="0.01">
+      <span class="unit">秒（小数点第2位まで）</span>
+    </div>
+    <div class="warn" id="anlasWarn"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>REFERENCE IMAGES</legend>
+    <div class="ref-section">
+      <h4 class="vibe-label">◆ バイブス（画風参照）</h4>
+      <div class="vibe-toolbar">
+        <button id="btnVibeImport">📂 バイブスを読み込み</button>
+        <button id="btnVibeEncodeAll">⚡ 全バイブスをエンコード</button>
+        <span class="tb-sep"></span>
+        <button class="bulk-ref" data-kind="vibe" data-on="1" title="全表情でこの種類の参照を有効にする">全表情でオン</button>
+        <button class="bulk-ref" data-kind="vibe" data-on="0" title="全表情でこの種類の参照を無効にする">全表情でオフ</button>
+      </div>
+      <div class="ref-cards" id="vibeCards"></div>
+      <p class="hint">画風や雰囲気を参照画像から転写します。エンコードしておくと、生成のたびにかかる 2 Anlas を節約できます。</p>
+    </div>
+    <div class="ref-section" style="margin-top:14px">
+      <h4 class="precise-label">◇ 精密参照（キャラ参照）</h4>
+      <div class="vibe-toolbar">
+        <button class="bulk-ref" data-kind="precise" data-on="1">全表情でオン</button>
+        <button class="bulk-ref" data-kind="precise" data-on="0">全表情でオフ</button>
+      </div>
+      <div class="ref-cards" id="preciseCards"></div>
+      <p class="hint">キャラクターの外見を参照して、表情差分どうしの一貫性を保ちます。Strength は再現の強さ、Fidelity は参照をどれだけ厳密に守るかです。「画風も参照」を入れると絵柄も引き継ぎます。画像は自動で規定サイズに変換されます。1 枚につき 5 Anlas かかります。</p>
+    </div>
+    <div class="ref-section" style="margin-top:14px">
+      <h4 style="color:var(--i2i)">■ img2img（元画像から生成）</h4>
+      <div class="vibe-toolbar">
+        <button class="bulk-ref" data-kind="i2i" data-on="1">全表情でオン</button>
+        <button class="bulk-ref" data-kind="i2i" data-on="0">全表情でオフ</button>
+      </div>
+      <div class="ref-cards" id="i2iCards"></div>
+      <p class="hint">元画像をもとに再生成します。Strength が高いほど元画像から離れ、Noise で追加ノイズを調整します。表情ごとにオン・オフでき、オンの表情では先頭の 1 枚が使われます。</p>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>PROMPTS</legend>
+    <div class="field"><label for="txtBase">基礎プロンプト（画風・構図など全プロジェクト共通の土台）</label>
+      <textarea id="txtBase" rows="4"></textarea></div>
+    <div class="field">
+      <label>キャラクター</label>
+      <div class="row" style="margin:4px 0 6px">
+        <select id="selChar" style="flex:1"></select>
+        <button id="btnAddChar" title="キャラ追加">＋</button>
+        <button id="btnRenameChar" title="名前変更">✏️</button>
+        <button id="btnDupChar" title="キャラ複製">⧉</button>
+        <button id="btnDelChar" class="danger" title="キャラ削除">✕</button>
+      </div>
+      <div id="charExportNameRow" class="row" style="margin:0 0 6px">
+        <label style="min-width:82px">書き出し名</label>
+        <input type="text" id="inpCharExportName" placeholder="Hanako" style="flex:1">
+        <span class="unit">ファイル名に使われます</span>
+      </div>
+      <textarea id="txtChar" rows="4" placeholder="髪・目・服装などキャラ固有情報"></textarea>
+      <p class="hint">キャラクターは複数保存でき、上のメニューで切り替えられます。「書き出し名」はカスタム命名を使うときのファイル名になります。</p>
+    </div>
+    <div class="field"><label for="txtCharNeg">キャラ共通ネガティブ（このキャラだけに効かせる除外指定）</label>
+      <textarea id="txtCharNeg" rows="3" placeholder="horn, animal ears, ahoge"></textarea></div>
+    <div class="field"><label for="txtNeg">基礎ネガティブプロンプト（画面全体）</label>
+      <textarea id="txtNeg" rows="4"></textarea></div>
+    <p class="hint">表情ごとのネガティブは、右側の各表情カードの <b>NEG</b> 欄で指定します。</p>
+    <div class="row"><label for="chkCharSlot">キャラ枠で送信</label>
+      <input type="checkbox" id="chkCharSlot"> <span class="unit">キャラ情報を専用フィールドに分けて送る</span></div>
+    <p class="hint" id="charSlotHint"></p>
+  </fieldset>
+
+  <fieldset>
+    <legend>EXPORT / CLEANUP</legend>
+    <div class="row"><label for="chkNaming">ファイル名規則</label>
+      <input type="checkbox" id="chkNaming"> <span class="unit">区切り文字と書き出し名を指定する</span></div>
+    <div class="naming-block" id="namingBlock">
+      <div class="naming-row">
+        <label for="inpSeparator">区切り文字</label>
+        <input type="text" id="inpSeparator" class="sep-input" maxlength="8" placeholder="_">
+        <span class="unit">例: _  -  半角スペース</span>
+      </div>
+      <p class="hint" style="margin:4px 0 0">オフのときはキャラクター名がそのまま使われます。英数字などに変えたい場合は「書き出し名」を設定してください。</p>
+      <div class="naming-preview" id="namingPreview"></div>
+    </div>
+    <div class="btnrow" style="margin-top:10px">
+      <button id="btnExportZip" class="primary">採用画像を ZIP 保存</button>
+      <button id="btnExportHeld">保留画像を ZIP 保存</button>
+      <button id="btnExportAll">すべての画像を ZIP 保存</button>
+    </div>
+    <div class="btnrow" style="margin-top:8px">
+      <button id="btnExportEach">採用画像を個別に保存</button>
+      <button id="btnPurge" class="danger">未選択の画像を削除</button>
+      <button id="btnPurgeAll" class="danger">すべての画像を削除</button>
+    </div>
+    <p class="hint">画像は「キャラ名_表情名.png」で保存されます。カスタム命名をオンにすると、区切り文字と、キャラ名の代わりに使う「書き出し名」を指定できます。ZIP 自体は「プロジェクト名_キャラ名_種別.zip」です。画像はブラウザ内に保存されるため、採用が決まったら早めに書き出してください。</p>
+  </fieldset>
+</aside>
+
+<section id="exprPanel">
+  <div class="expr-toolbar">
+    <div class="add-group">
+      <button id="btnAddExpr">＋ 表情を追加</button>
+      <input type="number" id="inpAddCount" min="1" max="20" value="1" title="一度に追加する数">
+    </div>
+    <button id="btnExportSet">セットを書き出し</button>
+    <button id="btnImportSet">セットを読み込み</button>
+    <button id="btnCopySet">他プロジェクトから複製</button>
+    <button id="btnBulkPrompt">プロンプト一括編集</button>
+    <button id="btnLibrary">📚 テンプレート</button>
+    <span class="sep"></span>
+    <span class="tb-group">
+      <button id="btnSelAll">すべて選択</button>
+      <button id="btnSelNone">選択を解除</button>
+      <button id="btnSelInvert">選択を反転</button>
+    </span>
+    <span class="tb-div"></span>
+    <button id="btnGenMissing">▶ 未生成のみ</button>
+    <button id="btnGenSelTop">▶ 選択した表情を生成</button>
+    <button id="btnGenAll" class="primary">▶ 全表情を生成</button>
+  </div>
+  <div class="sel-bar hidden" id="selBar">
+    <span class="count" id="selCount"></span>
+    <span class="sep" style="flex:1"></span>
+    <button id="btnSelDelImgs" class="danger">選択した表情の画像を削除</button>
+    <button id="btnSelDel" class="danger">選択した表情を削除</button>
+  </div>
+  <div class="filter-bar">
+    <span style="color:var(--faint);font-size:11px;margin-right:4px">フィルター:</span>
+    <button class="active" data-filter="all">すべて</button>
+    <button data-filter="adopted">採用</button>
+    <button data-filter="held">保留</button>
+    <button data-filter="none">未選択</button>
+  </div>
+  <div id="exprList"></div>
+  <div class="expr-add-bottom" id="exprAddBottom">
+    <button id="btnAddExprBottom">＋ 表情を追加</button>
+  </div>
+</section>
+</main>
+
+<div id="queueBar">
+  <span id="queueText"></span>
+  <div class="bar"><i id="queueFill"></i></div>
+  <button id="btnCancelQueue" class="danger">中止</button>
+</div>
+
+<div id="lightbox" role="dialog" aria-label="画像プレビュー">
+  <div class="stage">
+    <div id="lbFrame"><img id="lbImg" alt=""><span id="lbState"></span></div>
+    <div id="lbWrap"></div>
+  </div>
+  <div class="lb-info"><span class="lb-meta" id="lbMeta"></span></div>
+  <div class="lb-bar">
+    <button id="lbExprPrev" title="前の表情へ（↑ / Q）">▲ 表情 <kbd>↑</kbd></button>
+    <button id="lbPrev" title="前の画像へ（←）">◀</button>
+    <button id="lbNext" title="次の画像へ（→）">▶</button>
+    <button id="lbExprNext" title="次の表情へ（↓ / E）">▼ 表情 <kbd>↓</kbd></button>
+    <button id="lbAdopt" class="primary">★ 採用 <kbd>A</kbd></button>
+    <button id="lbHold">◆ 保留 <kbd>S</kbd></button>
+    <button id="lbSeedCopy" title="この画像のシード値をコピー">シード <kbd>C</kbd></button>
+    <button id="lbUseRef" title="精密参照に登録">📌 精密参照</button>
+    <button id="lbUseI2i" title="img2img の元画像に登録">🖼 i2i</button>
+    <button id="lbDelete" class="danger">削除 <kbd>D</kbd></button>
+    <button id="lbClose">閉じる <kbd>Esc</kbd></button>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="apiModal">
+  <div class="modal">
+    <h2>NOVELAI API キー</h2>
+    <p>NovelAI にログイン → 歯車 → <b>Account</b> → <b>Get Persistent API Token</b> で取得（<code>pst-...</code>）。このブラウザの localStorage にのみ保存されます。</p>
+    <input type="password" id="inpApiKey" placeholder="pst-..." style="width:100%">
+    <div class="btnrow"><button id="btnApiCancel">閉じる</button><button id="btnApiSave" class="primary">保存</button></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal" style="max-width:520px">
+    <h2 id="cfmTitle">確認</h2>
+    <div id="cfmBody"></div>
+    <div class="btnrow" id="cfmButtons"></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="bulkModal">
+  <div class="modal" style="max-width:660px">
+    <h2>プロンプト一括編集</h2>
+    <p>選択した表情、または全表情のプロンプトに文字列をまとめて挿入・削除します。実行前に下のプレビューで結果を確認できます。</p>
+    <div class="field"><label for="bulkScope">対象の表情</label>
+      <select id="bulkScope"></select></div>
+    <div class="field"><label for="bulkField">編集する欄</label>
+      <select id="bulkField">
+        <option value="prompt">プロンプト</option>
+        <option value="neg">ネガティブ（NEG）</option>
+      </select></div>
+    <div class="field"><label for="bulkOp">操作</label>
+      <select id="bulkOp">
+        <option value="append">末尾に挿入</option>
+        <option value="prepend">先頭に挿入</option>
+        <option value="remove">削除</option>
+      </select></div>
+    <div class="field"><label for="bulkText" id="bulkTextLabel">挿入する文字列</label>
+      <textarea id="bulkText" rows="2" placeholder="例: blush, looking at viewer"></textarea></div>
+    <div class="row" id="bulkCommaRow"><label for="bulkComma">カンマで区切る</label>
+      <input type="checkbox" id="bulkComma" checked> <span class="unit" id="bulkCommaHint">挿入する文字列の前に「, 」を付けます</span></div>
+    <div class="row" id="bulkSkipRow"><label for="bulkSkip">重複を避ける</label>
+      <input type="checkbox" id="bulkSkip" checked> <span class="unit">すでに同じ内容が入っている表情はそのままにします</span></div>
+    <div class="row"><label for="bulkTagMode">タグ単位で一致</label>
+      <input type="checkbox" id="bulkTagMode" checked> <span class="unit">カンマ区切りの 1 要素と完全一致した場合だけ対象にします</span></div>
+    <div class="row"><label for="bulkCase">大文字小文字を無視</label>
+      <input type="checkbox" id="bulkCase" checked> <span class="unit">smile と Smile を同じものとして扱います</span></div>
+    <h3>プレビュー <span id="bulkCount" class="hint" style="font-weight:normal"></span></h3>
+    <div id="bulkPreview" class="bulk-preview"></div>
+    <div class="btnrow">
+      <button id="btnBulkUndo" style="margin-right:auto" disabled>直前の一括編集を元に戻す</button>
+      <button id="btnBulkCancel">キャンセル</button>
+      <button id="btnBulkApply" class="primary">実行</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="libModal">
+  <div class="modal" style="max-width:860px">
+    <h2>表情テンプレート ライブラリ</h2>
+    <p>ここに保存した表情は<b>すべてのプロジェクト</b>から呼び出せます（このブラウザに保存されます）。バリエーション・NEG・無効化タグもまとめて保存されます。</p>
+    <div class="lib-tabs" id="libTabs">
+      <button class="active" data-tab="entry">表情</button>
+      <button data-tab="set">セット（組み合わせ）</button>
+    </div>
+    <div class="btnrow" style="justify-content:flex-start;margin:10px 0">
+      <button id="btnLibNew">＋ 新規</button>
+      <button id="btnLibFromSel">現在の表情から保存</button>
+      <span style="flex:1"></span>
+      <button id="btnLibExport">💾 書き出し</button>
+      <button id="btnLibImport">📂 読み込み</button>
+    </div>
+    <div id="libList" class="lib-list"></div>
+    <div id="libEditor" class="lib-editor" style="display:none"></div>
+    <div class="btnrow"><button id="btnLibClose" class="primary">閉じる</button></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="peekModal">
+  <div class="modal" style="max-width:720px">
+    <h2 id="peekTitle">送信プロンプトの確認</h2>
+    <p id="peekLead"></p>
+    <div id="peekBody"></div>
+    <div class="btnrow"><button id="btnPeekClose" class="primary">閉じる</button></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="helpModal">
+  <div class="modal">
+    <h2>使い方</h2>
+    <ol>
+      <li><b>APIキー</b>を設定（Opus なら小サイズ生成は無料枠内）。</li>
+      <li>左側で<b>基礎プロンプト</b>・<b>キャラプロンプト</b>・<b>ネガティブ</b>を編集。</li>
+      <li>必要に応じて<b>参照画像</b>を追加（バイブス＝画風 / 精密参照＝キャラ一貫性）。</li>
+      <li>右側で<b>表情</b>を編集し「▶ 全表情を生成」。</li>
+      <li>候補から <b>★ 採用</b>（各表情 1 枚）または <b>◆ 保留</b>（複数可）を付ける。</li>
+      <li>ZIP 書き出しで完了。</li>
+    </ol>
+    <h3>プロンプトの構造</h3>
+    <p>PROMPTS の「キャラ枠で送信」をオンにすると、次の 3 区分で送られます。</p>
+    <p style="margin-left:12px"><b>基礎</b>＝基礎プロンプト ／ 基礎ネガティブ（画面全体に効きます）<br>
+    <b>キャラ枠</b>＝キャラクター＋表情 ／ キャラ共通ネガティブ＋表情共通ネガティブ</p>
+    <p>キャラクターと表情はひとつの枠にまとめて入るので、表情ごとにプロンプトを差し替えても、キャラの外見指定は同じ枠に留まります。ネガティブも同じ分け方で、「このキャラには角を生やさない」といった指定が背景に波及しなくなります。</p>
+    <p>表情ごとのネガティブは各表情カードの <b>NEG</b> 欄に入力します。キャラ共通ネガティブと連結されてキャラ枠の除外指定になります。たとえば笑顔の表情にだけ <code>closed eyes</code> を入れておけば、その表情のときだけ目を閉じさせない、といった調整ができます。表情の複製・セットの書き出し／読み込み・他プロジェクトからの複製でも、この欄の内容は一緒に運ばれます。</p>
+    <p>オフにすると従来どおり、すべてが 1 本の文字列に連結されます。ネガティブも基礎に合流します。</p>
+    <p><b>注意：</b>キャラ枠は本来「複数キャラの描き分け」のための仕組みで、モデル内部でのタグの扱いが変わります。オンとオフでは同じシードでも別の絵が出ますし、キャラ側のタグは背景や画風に影響しにくくなります。途中で切り替えると、それまでの表情差分と絵柄が揃わなくなる点にご注意ください。</p>
+    <p>座標指定（複数キャラを画面のどこに置くか）は立ち絵用途では不要なため、中央固定・記述順で送っています。</p>
+    <h3>プロンプト一括編集</h3>
+    <p>表情リスト上部の「プロンプト一括編集」から、選択した表情またはすべての表情に対して、文字列をまとめて挿入・削除できます。編集先はプロンプト欄と NEG 欄のどちらかを選べます。</p>
+    <p>挿入は<b>末尾</b>か<b>先頭</b>を選べ、「カンマで区切る」をオンにすると区切りの <code>, </code> が自動で入ります（末尾挿入なら文字列の前、先頭挿入なら後ろ）。オフにすると何も挟まずそのまま連結されるので、語尾に <code>:1.2</code> のような重み指定を足したいときに使えます。「重複を避ける」をオンにすれば、すでに同じ内容が入っている表情は変更されません。</p>
+    <p>削除では「タグ単位で一致」が既定でオンになっています。この状態では<b>カンマ区切りの 1 要素と完全一致</b>したものだけが消えるため、<code>smile</code> を削除しても <code>smiling</code> や <code>smile, open mouth</code> の <code>open mouth</code> は残ります。オフにすると単純な文字列置換になり、語の一部にも当たります。余分になったカンマは自動で整理されます。</p>
+    <p>実行前にプレビューで変更前後が確認でき、実行後もモーダルを開き直せば「直前の一括編集を元に戻す」で 1 回分だけ取り消せます。</p>
+    <h3>表情テンプレート（全プロジェクト共通）</h3>
+    <p>ツールバーの「📚 テンプレート」から、表情をブラウザ内のライブラリに保存しておけます。ライブラリはプロジェクトに属さないので、<b>どのプロジェクトからでも呼び出せます</b>。バリエーション・NEG・無効化タグもまとめて保存されます。</p>
+    <p>「表情」タブは 1 件ずつのテンプレート、「セット（組み合わせ）」タブは複数の表情をひとまとめにしたものです。セットは「＋ セットを追加」で現在の表情の末尾に足すか、「置き換え」で丸ごと入れ替えられます（置き換えると生成済み画像も消えるため確認が入ります）。</p>
+    <p>各表情カードの <b>📚</b> を押すとその表情をテンプレートに保存、ライブラリ側の「現在の表情から保存」では選択中の表情（未選択なら全表情）をまとめて保存できます。ライブラリ全体は JSON で書き出し／読み込みができるので、別の PC へも持ち込めます。</p>
+    <h3>プロンプトのバリエーション</h3>
+    <p>ひとつの表情に複数のプロンプトを持たせられます。表情カードの「▸ バリエーション / 無効化」を開いて「＋ バリエーションを追加」で増やします。1 番目は上のプロンプト欄と同じもので、常に連動します。ラベルを付けておくと、どの候補から生成された画像かサムネイルの左下に表示されます。</p>
+    <p>候補が 2 件以上あると「選択」欄が出ます。<b>1番目</b>（既定）は常に先頭を使い、<b>ランダム</b>は 1 枚ごとに無作為に選び、<b>順番</b>は上から順に使って末尾まで行くと先頭へ戻ります。順番のときは次に使う候補がバッジに出て、クリックすると先頭に戻せます。</p>
+    <h3>表情ごとのプロンプト無効化</h3>
+    <p>同じカードの下側で、<b>その表情のときだけ送信プロンプトから消したいタグ</b>を指定できます。ネガティブとは違い、送る文字列から実際に取り除きます。たとえば基礎プロンプトやキャラプロンプトに <code>smile</code> が入っていても、「怒り」の表情に <code>smile, happy</code> を登録しておけば、その表情の生成時だけ両方が外れます。</p>
+    <p>比較はカンマ区切りの<b>タグ単位</b>で、<code>{smile}</code> や <code>1.2::smile::</code> のような強調・重み表記も同じタグとして扱います。<code>smil*</code> のように <code>*</code> を書けば前方一致などのワイルドカードになります。「部分一致」をオンにすると <code>open mouth smile</code> の中の <code>smile</code> だけを削るような動きになります。</p>
+    <p>対象は「基礎＋キャラプロンプト」が既定で、「基礎のみ」「キャラのみ」「表情プロンプトも含む」から選べます。実際に何が消えるかはその場に表示され、<b>👁</b> ボタンを押せばバリエーションごとの最終的な送信内容を確認できます。</p>
+    <h3>キャラクターと画像</h3>
+    <p>生成した画像は<b>キャラクターごと</b>に保存されます。キャラクターを切り替えると、そのキャラクターで生成した候補だけが表示され、以前のキャラクターに戻せば元の候補が戻ります。採用・保留・フィルター・ZIP 書き出し・一括削除も、すべて表示中のキャラクターが対象です。</p>
+    <p>生成キューは投入した時点のキャラクターを記憶します。生成中にキャラクターを切り替えても、実行中のジョブは元のキャラクターのプロンプトで生成され、そのキャラクターの下に保存されます。</p>
+    <p>キャラクターを削除すると、そのキャラクターの画像もあわせて削除されます（確認が入ります）。以前のバージョンで生成した画像は、最初のキャラクターのものとして引き継がれます。</p>
+    <h3>参照画像</h3>
+    <p><b>バイブス：</b>画風・色調・雰囲気を抽出します。Info Extracted で抽出量、Strength で反映強度を決めます。エンコードしておくと生成のたびにかかる 2 Anlas を節約できます（Info Extracted を変えると再エンコードが必要です）。各カードの「💾 書き出し」で <code>.naiv4vibe</code> 形式に書き出せます。NovelAI 本体のバイブス形式と互換なので、本体で作ったファイルを読み込んだり、逆に持ち込んだりできます。エンコード済みデータもファイルに含まれるため、別の PC でも再エンコードなしで使えます。</p>
+    <p><b>精密参照：</b>キャラの外見の一貫性を保ちます。まず 1 枚気に入った画像を生成 → 📌 で精密参照に登録 → 残りの表情を生成、という流れが基本です。<b>Strength</b> は再現の強さ、<b>Fidelity</b> は参照をどれだけ厳密に守るか（高いほど参照に忠実で、プロンプトで上書きしにくくなります）。「画風も参照」を入れると絵柄も引き継ぎます。参照画像は API が要求する規定サイズ（1024×1536／1472×1472／1536×1024 のうち、元画像の縦横比に最も近いもの）へ自動で変換されます。1 枚につき 5 Anlas の追加費用がかかります。</p>
+    <p>各表情のカードには参照画像のトグルが並び、その表情で使う参照だけを選べます。各セクションの「全表情でオン／オフ」を押せば、その種類の参照をすべての表情に対してまとめて切り替えられます。参照あり・なしを比べたいときに便利です。</p>
+    <h3>バックグラウンドでの生成</h3>
+    <p>Chrome や Edge は、裏に回ったタブのタイマーを抑制します。まず 1 秒の下限がかかり、5 分ほど非表示のままだとタイマーが 1 分に 1 回程度しか動かなくなります。生成リクエスト自体は抑制されないため、止まって見えるのは「次の 1 枚までの待ち時間」が数十倍に伸びるからです。</p>
+    <p>GENERATION の「バックグラウンド維持」をオンにすると、生成中だけ無音に近い音声を再生します。音を出しているページは抑制とタブ凍結の対象外になるため、裏に回しても速度が保たれます。実際に音は聞こえませんが、タブに音量アイコンが表示されます。あわせて待機処理を Worker のタイマーに移し、絶対時刻で待つようにしているので、タイマーが遅れて起きても遅れ分が積み上がりません。</p>
+    <p>それでも抑制が強くかかった場合はメッセージでお知らせします。確実なのはウィンドウを表示させたままにすることです。最小化や別ウィンドウで完全に覆うと非表示扱いになるので、小さくしてどこかに置いておくのが有効です。生成が終わるとデスクトップ通知でお知らせします（初回に許可を求めます）。</p>
+    <h3>未エンコードのバイブス</h3>
+    <p>バイブスは「モデル × Info Extracted」の組み合わせごとにエンコードが必要で、未エンコードのまま送ると API がリクエスト自体を拒否します。そこで生成を始める前に、これから作る表情で未エンコードのバイブスが指定されていないかを確認します。見つかった場合は確認画面が出て、<b>エンコードしてから生成</b>（1 件につき 2 Anlas）、<b>このバイブスを外して生成</b>（対象の表情でそのバイブスをオフにします）、<b>キャンセル</b>から選べます。</p>
+    <p>チェックの対象は、そのとき生成する表情でオンになっているバイブスだけです。オフにしてある表情や、今回生成しない表情でしか使っていないバイブスは、未エンコードでも生成を止めません。モデルや Info Extracted を後から変えた場合も、エンコードが古くなるので同じ確認が出ます。</p>
+    <h3>保留フラグ</h3>
+    <p>採用は各表情 1 枚のみですが、<b>保留</b>は複数付けられます。迷ったらまず保留 → フィルターで保留だけ表示して比較 → 最終的に 1 枚を採用、という流れに。「保留画像を ZIP 保存」で保留だけの書き出しも可能です。</p>
+    <h3>バックアップ / 復元</h3>
+    <p>ヘッダーの 💾 でプロジェクト設定（プロンプト・参照画像・表情セット）を JSON 書き出し。📂 で別ブラウザや別 PC に復元。生成済み画像は含まれません。</p>
+    <h3>生成の実行</h3>
+    <p><b>生成順序：</b>GENERATION の「生成順序」で 2 通りから選べます。「表情ごとにまとめて」は、ひとつの表情を規定枚数ぶん作ってから次へ進みます。「1 枚ずつ交互に」は全表情を 1 枚ずつ一巡し、それを規定枚数ぶん繰り返します。後者なら途中で止めても全表情が均等に埋まるので、まず 1 周ぶんを見て方向性を確かめたいときに向いています。</p>
+    <p>上部のツールバーには 3 種類の生成ボタンがあります。「未生成の表情のみ」は、まだ 1 枚も画像がない表情だけをまとめて生成します（対象の件数がボタンに出ます）。追加した表情だけを埋めたいときや、途中で中止した続きから再開したいときに便利です。「選択した表情を生成」はチェックを入れた表情だけ、「全表情を生成」はすべての表情が対象です。</p>
+    <h3>表情の追加・削除</h3>
+    <p>上部のツールバーは画面に固定されているため、「＋ 表情を追加」を続けて押していけばまとめて追加できます。横の数値欄に数を入れておけば、一度に複数まとめて追加することも可能です（押した位置は動かないので、そのまま連続で押せます）。リストの末尾にも同じボタンがあり、そちらは追加した表情までスクロールして名前欄にカーソルを合わせます。各表情の「＋」を押すと、その直下に新しい表情を挿入できます。</p>
+    <p>各表情の左端のチェックボックスで選択できます。「すべて選択」「選択を解除」「選択を反転」と「選択した表情を生成」は上部のツールバーにまとまっています。選択すると、その下に削除用のバーが現れます。</p>
+    <h3>画像ビューのショートカット</h3>
+    <p>サムネイルをクリックして開いた拡大表示では、次のキーが使えます。</p>
+    <p style="margin-left:12px"><code>←</code> <code>→</code> 前後の画像へ／<code>↑</code> <code>↓</code>（または <code>Q</code> <code>E</code>）前後の表情へ／<code>A</code> または <code>Enter</code> 採用（採用済みならもう一度押すと取り消し）／<code>S</code> または <code>H</code> 保留（もう一度で解除）／<code>D</code> または <code>Delete</code> 削除／<code>C</code> シード値をコピー／<code>Esc</code> 閉じる</p>
+    <p>シード値は画面には表示していませんが、<code>C</code> か「シード」ボタンでいつでもコピーできます。</p>
+    <p>上下キーを使えば、拡大表示を閉じずに表情をまたいで選別を進められます。移動先の表情名と候補の枚数が画面中央に一瞬表示されます。候補が 1 枚もない表情は自動的に読み飛ばされ、最後の表情から先へ進むと最初の表情に戻ります。フィルターを「保留」にしておけば、保留中の画像だけを表情順に見ていくこともできます。</p>
+    <p>採用と保留は排他です。採用すると保留は外れ、保留にすると採用は外れます。どちらも同じキーをもう一度押せば解除できるので、選び直しも自由にできます。矢印キーで送りながら <code>A</code> と <code>S</code> を押していけば、マウスに触れずに選別できます。</p><p>拡大表示中は、採用した画像は緑、保留中の画像は黄色の枠で囲まれ、左上にも印が出ます。送りながらでも今どちらを付けたか一目で分かります。</p><p>候補を一巡して最初の画像に戻ると、画面の中央に案内が出て枠が一瞬光ります。全部を見終えたことがすぐ分かります。</p>
+    <h3>画像の削除とストレージ</h3>
+    <p>画像は削除するとブラウザのデータベースから実際に消えます。ゴミ箱のような復元領域は持っていないため、消したものは戻せません（書き出し済みのファイルは残ります）。</p>
+    <p>ただしブラウザ側の都合として、削除直後にディスクの空き容量がすぐ増えるとは限りません。ブラウザはデータベースの空き領域をしばらく保持し、あとでまとめて回収します。使用量が気になるときは、ブラウザを再起動するか、しばらく使っていれば自然に解放されます。完全に消したい場合は、ブラウザの設定からこのページのサイトデータを削除してください（その場合はプロジェクトごとすべて消えます）。</p>
+    <h3>ファイル名規則</h3>
+    <p>書き出される画像のファイル名は <code>キャラ名_表情名.png</code> です。キャラクターを切り替えれば、そのキャラの名前で保存されます。同じ表情に複数の画像がある場合は <code>_1</code> <code>_2</code> の連番が付きます。</p>
+    <p>EXPORT の「カスタム命名を使用する」をオンにすると、区切り文字を自由に変えられます（<code>_</code> <code>-</code> 半角スペースなど。空にすれば <code>Hanakosmile.png</code> のように直結します）。また PROMPTS セクションに「書き出し名」の欄が出るので、日本語のキャラ名とは別に <code>Hanako</code> のような英数字名を指定できます。設定した内容はプレビューで確認できます。</p>
+    <p>ZIP ファイル自体の名前は <code>プロジェクト名_キャラ名_種別.zip</code> になります。</p>
+    <h3>リトライジッター</h3>
+    <p>ON にすると 429 レート制限時の待機時間（基本15秒）にランダムな秒数を加えます。加算範囲は小数点第2位まで自由に設定でき（例: 0.50〜8.00秒）、複数タブで同時に回す場合の衝突回避に有効です。</p>
+    <div class="btnrow"><button id="btnHelpClose" class="primary">閉じる</button></div>
+  </div>
+</div>
+
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+<input type="file" id="refFileInput" accept="image/png,image/jpeg,image/webp" hidden>
+<input type="file" id="restoreFile" accept=".json,application/json" hidden>
+<input type="file" id="vibeImportFile" accept=".naiv4vibe,.json,application/json" hidden>
+<input type="file" id="libImportFile" accept=".json,application/json" hidden>
+<div id="toasts"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
