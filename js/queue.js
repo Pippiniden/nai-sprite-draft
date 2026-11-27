@@ -76,8 +76,10 @@ export async function enqueue(exprIds){
   if(!jobs.length)return;
   // Bind each job to the character that was active when it was queued, so switching
   // characters mid-run neither retargets the prompt nor misfiles the results.
+  // Likewise bind them to the project, so opening another project mid-run does not
+  // silently drop the rest of the queue.
   const cid=curChar(p).id;
-  for(const j of jobs)j.charId=cid;
+  for(const j of jobs){j.charId=cid;j.projectId=p.id;}
   if(!queue.running){queue.total=0;queue.done=0;}
   queue.jobs.push(...jobs);queue.total+=jobs.length;
   runQueue();
@@ -89,30 +91,39 @@ export async function runQueue(){
   const startedAt=queue.done;
   while(queue.jobs.length&&!queue.cancel){
     const job=queue.jobs[0];
-    const ex=state.project?.expressions.find(e=>e.id===job.exprId);
-    if(!ex||!state.project){queue.jobs.shift();queue.done++;updateQueueBar();continue;}
-    updateQueueBar(ex.name);
+    // Jobs queued before v21 have no projectId; they belong to whatever is open.
+    const proj=job.projectId?state.projects.find(p=>p.id===job.projectId):state.project;
+    const ex=proj?.expressions.find(e=>e.id===job.exprId);
+    if(!ex){queue.jobs.shift();queue.done++;updateQueueBar();continue;}
+    const isCur=proj===state.project;
+    const label=isCur?ex.name:`${ex.name}（${proj.name}）`;
+    updateQueueBar(label);
     try{
       const seed=Math.floor(Math.random()*0xFFFFFFFF);
-      const ch=state.project.characters.find(c=>c.id===job.charId)||curChar(state.project);
+      const ch=proj.characters.find(c=>c.id===job.charId)||curChar(proj);
       const vIdx=pickVariantIdx(ex);
-      const payload=buildPayload(state.project,ex,seed,ch,vIdx);
+      const payload=buildPayload(proj,ex,seed,ch,vIdx);
       const blob=await apiGenerate(payload);
-      const rec={id:uid(),projectId:state.project.id,charId:ch.id,exprId:ex.id,blob,seed,prompt:payload.input,width:state.project.settings.width,height:state.project.settings.height,model:state.project.settings.model,adopted:false,held:false,createdAt:Date.now(),variantIdx:vIdx,variantLabel:ex.variants&&ex.variants.length>1?variantLabel(ex,vIdx):''};
+      const rec={id:uid(),projectId:proj.id,charId:ch.id,exprId:ex.id,blob,seed,prompt:payload.input,width:proj.settings.width,height:proj.settings.height,model:proj.settings.model,adopted:false,held:false,createdAt:Date.now(),variantIdx:vIdx,variantLabel:ex.variants&&ex.variants.length>1?variantLabel(ex,vIdx):''};
       await idb.put('images',rec);
-      state.allImages.push(rec);
-      // only surface it immediately if the user is still looking at that character
-      if(rec.charId===state.project.currentCharId){state.images.push(rec);renderExprThumbs(ex.id);renderExprStatus(ex.id);}
-      updateMissingBtn();
+      if(proj===state.project){
+        state.allImages.push(rec);
+        // only surface it immediately if the user is still looking at that character
+        if(rec.charId===proj.currentCharId){state.images.push(rec);renderExprThumbs(ex.id);renderExprStatus(ex.id);}
+        updateMissingBtn();
+      }else{
+        // saveProject() only writes the open project; persist the variant cursor here
+        idb.put('projects',proj).catch(()=>{});
+      }
       queue.jobs.shift();queue.done++;
     }catch(e){
       if(e.status===429){
-        const base=15000;const s=state.project.settings;
+        const base=15000;const s=proj.settings;
         let jitter=0;
         if(s.jitter){const lo=(s.jitterMin??0)*1000,hi=(s.jitterMax??10)*1000;jitter=lo+Math.random()*Math.max(0,hi-lo);}
         const wait=base+jitter;
         toast(`レート制限中です。${(wait/1000).toFixed(2)} 秒後に再試行します`);
-        updateQueueBar(ex.name+' (待機中)');await bgSleep(wait);continue;
+        updateQueueBar(label+' (待機中)');await bgSleep(wait);continue;
       }
       if(e.status===401){toast('APIキーが正しくありません。設定を確認してください','err');queue.jobs.length=0;break;}
       if(e.status===402){toast('Anlas が不足しています','err');queue.jobs.length=0;break;}
@@ -120,7 +131,7 @@ export async function runQueue(){
     }
     updateQueueBar();
     if(queue.jobs.length&&!queue.cancel){
-      const ss=state.project.settings;let delay=Math.max(0,(ss.delaySec||0)*1000);
+      const ss=proj.settings;let delay=Math.max(0,(ss.delaySec||0)*1000);
       if(ss.jitter){const lo=(ss.jitterMin??0)*1000,hi=(ss.jitterMax??10)*1000;delay+=lo+Math.random()*Math.max(0,hi-lo);}
       await bgSleep(delay);
     }
