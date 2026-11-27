@@ -165,6 +165,7 @@ legend{padding:0 8px;color:var(--accent);font-size:11px;letter-spacing:.18em;fon
 #lightbox .lb-bar{display:flex;gap:8px;align-items:center;justify-content:center;padding:10px 12px 12px;flex-wrap:wrap}
 #lightbox .lb-meta{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center}
 #lightbox kbd{font-family:var(--mono);font-size:9.5px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:3px;padding:0 4px;margin-left:3px;opacity:.75}
+#lbExprMode.on{border-color:var(--accent);color:var(--accent)}
 #lightbox .primary kbd{background:rgba(0,0,0,.18);border-color:rgba(0,0,0,.25)}
 /* wrap-around indicator */
 #lightbox .stage{position:relative}

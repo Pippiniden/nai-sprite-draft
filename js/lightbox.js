@@ -18,6 +18,22 @@ export function openLightbox(imageId){
   lb.idx=lb.list.indexOf(imageId);if(lb.idx<0)lb.idx=0;
   $('#lightbox').classList.add('show');renderLightbox();
 }
+/* ↑↓ mode: 'all' visits every expression that has images; 'undecided' skips
+   expressions where something is already adopted or held. Remembered across visits. */
+const EXPR_MODE_KEY='nai_lb_expr_mode';
+let exprMode=localStorage.getItem(EXPR_MODE_KEY)==='undecided'?'undecided':'all';
+const isDecided=exprId=>state.images.some(i=>i.exprId===exprId&&(i.adopted||i.held));
+function renderExprMode(){
+  const b=$('#lbExprMode');const on=exprMode==='undecided';
+  b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));
+  b.innerHTML=(on?'↕ 未判定のみ':'↕ すべての表情')+' <kbd>U</kbd>';
+}
+function toggleExprMode(){
+  exprMode=exprMode==='undecided'?'all':'undecided';
+  localStorage.setItem(EXPR_MODE_KEY,exprMode);
+  renderExprMode();
+  showWrap(exprMode==='undecided'?'↑↓ で未判定の表情だけを巡ります':'↑↓ ですべての表情を巡ります');
+}
 /* Jump to the previous / next expression that has images under the current filter. */
 export function lbGoExpr(dir){
   const p=state.project;if(!p)return;
@@ -25,9 +41,13 @@ export function lbGoExpr(dir){
   if(exprs.length<=1){showWrap('ほかに表情がありません');return;}
   const cur=exprs.findIndex(e=>e.id===lb.exprId);
   if(cur<0)return;
-  for(let step=1;step<=exprs.length;step++){
+  const undecided=exprMode==='undecided';
+  // in undecided mode, landing back on the current expression is not progress
+  const maxStep=undecided?exprs.length-1:exprs.length;
+  for(let step=1;step<=maxStep;step++){
     const i=(cur+dir*step+exprs.length*step)%exprs.length;
     const ex=exprs[i];
+    if(undecided&&isDecided(ex.id))continue;      // already adopted / held — skip
     const list=lbBuildList(ex.id);
     if(!list.length)continue;                     // skip expressions with nothing to show
     const wrapped=dir>0?i<=cur:i>=cur;
@@ -35,9 +55,10 @@ export function lbGoExpr(dir){
     renderLightbox();
     const pos=`${i+1}/${exprs.length}`;
     showWrap((wrapped?'↻ ':'')+`${ex.name}（${pos}・${list.length} 枚）`);
-    return;
+    return true;
   }
-  showWrap('ほかに表示できる表情がありません');
+  showWrap(undecided?'未判定の表情はほかにありません':'ほかに表示できる表情がありません');
+  return false;
 }
 export function renderLightbox(){
   const id=lb.list[lb.idx];const rec=state.images.find(i=>i.id===id);
@@ -92,6 +113,8 @@ $('#lbPrev').onclick=()=>lbGo(-1);
 $('#lbNext').onclick=()=>lbGo(1);
 $('#lbExprPrev').onclick=()=>lbGoExpr(-1);
 $('#lbExprNext').onclick=()=>lbGoExpr(1);
+$('#lbExprMode').onclick=toggleExprMode;
+renderExprMode();
 $('#lbAdopt').onclick=async()=>{const r=await adoptImage(lb.list[lb.idx]);renderLightbox();if(r==='cleared')toast('採用を取り消しました');};
 $('#lbHold').onclick=async()=>{await holdImage(lb.list[lb.idx]);renderLightbox();};
 $('#lbSeedCopy').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.idx]);if(rec){navigator.clipboard?.writeText(String(rec.seed));toast('シード値をコピーしました: '+rec.seed,'ok');}};
@@ -112,7 +135,7 @@ $('#lbDelete').onclick=async()=>{
   if(!lb.list.length){
     // this expression is now empty — carry on with the next one if there is one
     const others=state.project.expressions.some(e=>e.id!==lb.exprId&&lbBuildList(e.id).length);
-    if(others)lbGoExpr(1); else closeLightbox();
+    if(!(others&&lbGoExpr(1)))closeLightbox();
     return;
   }
   lb.idx=Math.min(lb.idx,lb.list.length-1);renderLightbox();
@@ -138,6 +161,8 @@ document.addEventListener('keydown',e=>{
       hit(); $('#lbDelete').click(); break;         // 削除
     case 'c':
       hit(); $('#lbSeedCopy').click(); break;       // シードをコピー
+    case 'u':
+      hit(); toggleExprMode(); break;               // ↑↓ の移動モード切り替え
   }
 });
 $('#lightbox').addEventListener('click',e=>{if(e.target.id==='lightbox'||e.target.classList.contains('stage'))closeLightbox();});
