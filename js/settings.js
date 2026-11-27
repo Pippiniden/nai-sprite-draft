@@ -43,7 +43,8 @@ export function updateAnlasWarn(){
 /* ---- Settings handlers ---- */
 export function bind(id,fn){$(id).addEventListener('input',e=>{fn(e.target);saveProject();});}
 bind('#inpProjectName',t=>{state.project.name=t.value;renderProjectSelect();});
-bind('#selModel',t=>state.project.settings.model=t.value);
+// Vibe encodings are per model, so the Encoded / 要再エンコード badges must follow it.
+bind('#selModel',t=>{state.project.settings.model=t.value;renderRefCards();});
 $('#selSize').addEventListener('change',e=>{const s=state.project.settings;s.sizePreset=e.target.value;if(s.sizePreset!=='custom'){const[w,h]=s.sizePreset.split('x').map(Number);s.width=w;s.height=h;}renderSettings();saveProject();});
 export function clamp64(v){v=Math.round((+v||64)/64)*64;return Math.min(2048,Math.max(64,v));}
 $('#inpWidth').addEventListener('change',e=>{state.project.settings.width=clamp64(e.target.value);renderSettings();saveProject();});
