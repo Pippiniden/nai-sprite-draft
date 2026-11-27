@@ -44,13 +44,13 @@ export function bgTimeout(ms){
 /* Wait until an absolute deadline. Timers may fire late or early; we re-check the
    clock each time and never sleep past the deadline in one hop, so a throttled tab
    catches up the moment it is allowed to run. */
-export async function bgSleep(ms){
+export async function bgSleep(ms,shouldStop){
   if(ms<=0)return;
   const deadline=Date.now()+ms;
   let overshoot=0;
   for(;;){
     const left=deadline-Date.now();
-    if(left<=0)break;
+    if(left<=0||shouldStop?.())break;   // hops are ≤1s, so a stop request lands within a second
     const before=Date.now();
     await Promise.race([bgTimeout(Math.min(left,1000)),sleep(Math.min(left,1000))]);
     overshoot=Math.max(overshoot,(Date.now()-before)-Math.min(left,1000));

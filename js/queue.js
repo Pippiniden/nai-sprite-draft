@@ -10,6 +10,8 @@ import { pickVariantIdx, variantLabel } from './variants.js';
 
 /* ==== Queue ==== */
 export const queue={jobs:[],running:false,cancel:false,total:0,done:0};
+/* Consecutive 429s before the queue gives up. Waits grow 15s → 30s → 60s (capped). */
+const RATE_LIMIT_MAX_RETRIES=6;
 
 /* Vibes have to be encoded for the model + Info Extracted combination actually in use.
    An unencoded one makes the API reject the whole request, so check before spending
@@ -89,6 +91,8 @@ export async function runQueue(){
   queue.running=true;queue.cancel=false;updateQueueBar();
   keepAliveOn();
   const startedAt=queue.done;
+  let rateLimited=0;
+  const stopRequested=()=>queue.cancel;
   while(queue.jobs.length&&!queue.cancel){
     const job=queue.jobs[0];
     // Jobs queued before v21 have no projectId; they belong to whatever is open.
@@ -115,15 +119,20 @@ export async function runQueue(){
         // saveProject() only writes the open project; persist the variant cursor here
         idb.put('projects',proj).catch(()=>{});
       }
-      queue.jobs.shift();queue.done++;
+      queue.jobs.shift();queue.done++;rateLimited=0;
     }catch(e){
       if(e.status===429){
-        const base=15000;const s=proj.settings;
+        rateLimited++;
+        if(rateLimited>RATE_LIMIT_MAX_RETRIES){
+          toast(`レート制限が ${RATE_LIMIT_MAX_RETRIES} 回続いたため生成を中止しました。しばらく待ってから再開してください（「未生成のみ」で続きから再開できます）`,'err');
+          queue.jobs.length=0;break;
+        }
+        const base=15000*Math.min(4,2**(rateLimited-1));const s=proj.settings;
         let jitter=0;
         if(s.jitter){const lo=(s.jitterMin??0)*1000,hi=(s.jitterMax??10)*1000;jitter=lo+Math.random()*Math.max(0,hi-lo);}
-        const wait=base+jitter;
-        toast(`レート制限中です。${(wait/1000).toFixed(2)} 秒後に再試行します`);
-        updateQueueBar(label+' (待機中)');await bgSleep(wait);continue;
+        const wait=Math.max(base,e.retryAfter||0)+jitter;
+        toast(`レート制限中です。${(wait/1000).toFixed(2)} 秒後に再試行します（${rateLimited}/${RATE_LIMIT_MAX_RETRIES}）`);
+        updateQueueBar(label+' (待機中)');await bgSleep(wait,stopRequested);continue;
       }
       if(e.status===401){toast('APIキーが正しくありません。設定を確認してください','err');queue.jobs.length=0;break;}
       if(e.status===402){toast('Anlas が不足しています','err');queue.jobs.length=0;break;}
@@ -133,7 +142,7 @@ export async function runQueue(){
     if(queue.jobs.length&&!queue.cancel){
       const ss=proj.settings;let delay=Math.max(0,(ss.delaySec||0)*1000);
       if(ss.jitter){const lo=(ss.jitterMin??0)*1000,hi=(ss.jitterMax??10)*1000;delay+=lo+Math.random()*Math.max(0,hi-lo);}
-      await bgSleep(delay);
+      await bgSleep(delay,stopRequested);
     }
   }
   if(queue.cancel)queue.jobs.length=0;

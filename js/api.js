@@ -83,6 +83,9 @@ export function buildPayload(project,expr,seed,forChar,variantIdx){
 }
 export async function apiGenerate(payload){
   const res=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+state.apiKey},body:JSON.stringify(payload)});
-  if(!res.ok){let msg='HTTP '+res.status;try{const j=await res.json();if(j.message)msg+=': '+j.message}catch(_){}const e=new Error(msg);e.status=res.status;throw e;}
+  if(!res.ok){let msg='HTTP '+res.status;try{const j=await res.json();if(j.message)msg+=': '+j.message}catch(_){}const e=new Error(msg);e.status=res.status;
+    // seconds form only; the header is often not exposed to the page, so it may be absent
+    const ra=parseFloat(res.headers.get('Retry-After'));if(ra>0)e.retryAfter=ra*1000;
+    throw e;}
   return zipFirstEntry(await res.arrayBuffer());
 }
