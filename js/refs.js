@@ -354,15 +354,21 @@ export async function addI2iFromFile(file){
   const p=state.project;if(!p)return;ensureRefArrays(p);
   try{const b64=await fileToBase64(file);p.i2iImages.push({id:uid(),base64:b64,strength:0.5,noise:0});saveProject();renderRefCards();updateAnlasWarn();renderAllExprRefToggles();toast('img2img の元画像を追加しました','ok');}catch(err){toast('読み込みに失敗しました: '+err.message,'err');}
 }
-export async function addI2iFromBlob(blob,quiet){
+/* Register an image as an i2i source. Given the expression it was generated for, and with
+   the "i2iSourceOnly" setting on, the source is on for that expression only (see refOn). */
+export async function addI2iFromBlob(blob,quiet,exprId){
   const p=state.project;if(!p)return null;ensureRefArrays(p);
-  const b64=await blobToBase64(blob);const entry={id:uid(),base64:b64,strength:0.5,noise:0};p.i2iImages.push(entry);
-  saveProject();renderRefCards();updateAnlasWarn();renderAllExprRefToggles();if(!quiet)toast('img2img の元画像に登録しました','ok');
+  const b64=await blobToBase64(blob);const entry={id:uid(),base64:b64,strength:0.5,noise:0};
+  const ex=exprId&&p.settings.i2iSourceOnly!==false?p.expressions.find(e=>e.id===exprId):null;
+  if(ex){entry.defaultOff=true;if(!ex.refConfig)ex.refConfig={};ex.refConfig[entry.id]=true;}
+  p.i2iImages.push(entry);
+  saveProject();renderRefCards();updateAnlasWarn();renderAllExprRefToggles();
+  if(!quiet)toast(ex?`img2img の元画像に登録しました（「${ex.name}」だけでオン）`:'img2img の元画像に登録しました','ok');
   return entry;
 }
 /* Register a generated image as an i2i source and open it in the editor straight away
    (mode 'paint' or 'mask'). It is dropped again if the editor is left with no change. */
-export async function editFromBlob(blob,mode){
-  const entry=await addI2iFromBlob(blob,true);
+export async function editFromBlob(blob,mode,exprId){
+  const entry=await addI2iFromBlob(blob,true,exprId);
   if(entry)openMaskEditor(entry,{discardIfEmpty:true,mode});
 }

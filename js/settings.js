@@ -24,6 +24,7 @@ export function renderSettings(){
   updateNamingPreview();
   $('#txtBase').value=p.basePrompt;$('#txtNeg').value=p.negPrompt;
   $('#chkCharSlot').checked=!!s.charSlot;updateCharSlotHint();
+  $('#chkI2iSourceOnly').checked=s.i2iSourceOnly!==false;
   renderCharSelect();
   updateAnlasWarn();renderRefCards();
 }
@@ -115,6 +116,7 @@ bind('#txtChar',t=>{const c=curChar(state.project);c.prompt=t.value;});
 bind('#txtCharNeg',t=>{const c=curChar(state.project);c.neg=t.value;});
 bind('#txtNeg',t=>state.project.negPrompt=t.value);
 bind('#chkCharSlot',t=>{state.project.settings.charSlot=t.checked;updateCharSlotHint();});
+bind('#chkI2iSourceOnly',t=>state.project.settings.i2iSourceOnly=t.checked);
 export function updateCharSlotHint(){
   const s=state.project?.settings;const el=$('#charSlotHint');if(!s||!el)return;
   el.textContent=s.charSlot

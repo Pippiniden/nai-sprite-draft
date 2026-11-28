@@ -6,6 +6,14 @@ export const QUALITY_TAGS={'nai-diffusion-4-5-full':', very aesthetic, masterpie
 export const DEFAULT_NEG='blurry, lowres, upscaled, artistic error, film grain, scan artifacts, worst quality, bad quality, jpeg artifacts, very displeasing, chromatic aberration, dithering, halftone, screentone, multiple views, logo, too many watermarks, negative space, blank page';
 export const DEFAULT_BASE='1girl, standing, full body, looking at viewer, simple background, white background';
 export const DEFAULT_EXPRS=[['基本',''],['通常','neutral expression, closed mouth'],['笑顔','smile, open mouth, happy'],['怒り','angry, frown, v-shaped eyebrows'],['悲しみ','sad, tears, teary eyes'],['驚き','surprised, wide eyes, open mouth'],['照れ','blush, embarrassed, averting eyes']];
+/* Whether a reference is on for an expression. An explicit per-expression toggle wins;
+   otherwise references are on, except an i2i source sent from a generated image while
+   "i2iSourceOnly" was set (ref.defaultOff), which starts off for every other expression,
+   including ones added later. */
+export function refOn(expr,ref){
+  const v=expr?.refConfig?.[ref.id];
+  return v===undefined?!ref.defaultOff:v!==false;
+}
 export function ensureRefArrays(p){
   if(!p.vibes)p.vibes=[];if(!p.preciseRefs)p.preciseRefs=[];if(!p.i2iImages)p.i2iImages=[];
   // Older builds padded to the generation resolution; those caches are invalid now.
@@ -23,7 +31,7 @@ export function ensureRefArrays(p){
 }
 export function ensureSettings(p){
   if(!p.settings)p.settings={};
-  const d={model:'nai-diffusion-4-5-full',sizePreset:'832x1216',width:832,height:1216,steps:28,scale:5,cfgRescale:0,sampler:'k_euler_ancestral',noiseSchedule:'karras',count:4,delaySec:3,quality:true,jitter:false,jitterMin:0,jitterMax:10,namingEnabled:false,namingSeparator:'_',order:'grouped',charSlot:true,bgKeepAlive:true};
+  const d={model:'nai-diffusion-4-5-full',sizePreset:'832x1216',width:832,height:1216,steps:28,scale:5,cfgRescale:0,sampler:'k_euler_ancestral',noiseSchedule:'karras',count:4,delaySec:3,quality:true,jitter:false,jitterMin:0,jitterMax:10,namingEnabled:false,namingSeparator:'_',order:'grouped',charSlot:true,bgKeepAlive:true,i2iSourceOnly:true};
   for(const[k,v]of Object.entries(d))if(p.settings[k]===undefined)p.settings[k]=v;
 }
 export function ensureCharacters(p){

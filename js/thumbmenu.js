@@ -39,9 +39,9 @@ export function openThumbMenu(im,x,y){
       case 'adopt':{const r=await adoptImage(im.id);if(r==='cleared')toast('採用を取り消しました');break;}
       case 'hold':await holdImage(im.id);break;
       case 'ref':addRefFromBlob(im.blob,'precise');break;
-      case 'i2i':addI2iFromBlob(im.blob);break;
-      case 'paint':editFromBlob(im.blob,'paint');break;
-      case 'inpaint':editFromBlob(im.blob,'mask');break;
+      case 'i2i':addI2iFromBlob(im.blob,false,im.exprId);break;
+      case 'paint':editFromBlob(im.blob,'paint',im.exprId);break;
+      case 'inpaint':editFromBlob(im.blob,'mask',im.exprId);break;
       case 'seed':navigator.clipboard?.writeText(String(im.seed));toast('シード値をコピーしました: '+im.seed,'ok');break;
       case 'del':if(confirm('この候補を削除します。よろしいですか？'))deleteImage(im.id);break;
     }

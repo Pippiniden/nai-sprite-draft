@@ -378,3 +378,4 @@ legend{padding:0 8px;color:var(--accent);font-size:11px;letter-spacing:.18em;fon
 .layer-list .layer.hidden-layer .eye{opacity:.35}
 .layer-list .layer.hidden-layer .nm{text-decoration:line-through;opacity:.6}
 .mask-cursor.lasso{border-radius:2px;border-style:solid;background:none!important}
+.i2i-scope{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--muted);cursor:pointer}

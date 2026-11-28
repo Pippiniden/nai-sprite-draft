@@ -119,8 +119,8 @@ $('#lbAdopt').onclick=async()=>{const r=await adoptImage(lb.list[lb.idx]);render
 $('#lbHold').onclick=async()=>{await holdImage(lb.list[lb.idx]);renderLightbox();};
 $('#lbSeedCopy').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.idx]);if(rec){navigator.clipboard?.writeText(String(rec.seed));toast('シード値をコピーしました: '+rec.seed,'ok');}};
 $('#lbUseRef').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.idx]);if(rec)addRefFromBlob(rec.blob,'precise');};
-$('#lbUseI2i').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.idx]);if(rec)addI2iFromBlob(rec.blob);};
-$('#lbInpaint').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.idx]);if(rec)editFromBlob(rec.blob,'paint');};
+$('#lbUseI2i').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.idx]);if(rec)addI2iFromBlob(rec.blob,false,rec.exprId);};
+$('#lbInpaint').onclick=()=>{const rec=state.images.find(i=>i.id===lb.list[lb.idx]);if(rec)editFromBlob(rec.blob,'paint',rec.exprId);};
 $('#lbDelete').onclick=async()=>{
   const id=lb.list[lb.idx];
   const rec=state.images.find(i=>i.id===id);if(!rec)return;

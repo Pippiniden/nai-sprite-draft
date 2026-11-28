@@ -1,5 +1,5 @@
 import { compositeLayersBase64, fitMaskToSizeBase64, fitToSizeBase64, vibeGetEncoded } from './refs.js';
-import { QUALITY_TAGS, curChar, ensureCharacters, ensureRefArrays, state } from './state.js';
+import { QUALITY_TAGS, curChar, ensureCharacters, ensureRefArrays, refOn, state } from './state.js';
 import { composeParts } from './variants.js';
 import { zipFirstEntry } from './zip.js';
 
@@ -23,8 +23,7 @@ export async function callEncodeVibe(imageBase64, model, infoExtracted){
 /* ==== NovelAI API ==== */
 /* The first img2img source enabled for this expression, or null. */
 export function activeI2i(project,expr){
-  const rc=expr?.refConfig||{};
-  return (project.i2iImages||[]).find(im=>rc[im.id]!==false)||null;
+  return (project.i2iImages||[]).find(im=>refOn(expr,im))||null;
 }
 /* img2img needs the source at exactly the generation size, or the API rejects it.
    Uploaded files rarely match, so scale-and-crop once per source × size and keep it in

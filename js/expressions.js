@@ -3,7 +3,7 @@ import { exprToEntry, lib, libSave } from './library.js';
 import { openLightbox } from './lightbox.js';
 import { enqueue } from './queue.js';
 import { addI2iFromBlob, addRefFromBlob } from './refs.js';
-import { ensureRefArrays, saveProject, state } from './state.js';
+import { ensureRefArrays, refOn, saveProject, state } from './state.js';
 import { openThumbMenu } from './thumbmenu.js';
 import { toast } from './ui.js';
 import { $, $$, download, esc, refImgURL, sanitize } from './util.js';
@@ -215,7 +215,7 @@ export function renderExprRefToggles(ex){
   if(!allRefs.length){row.innerHTML='<span class="expr-refs-empty">参照画像は登録されていません</span>';return;}
   const lbl=document.createElement('span');lbl.className='ref-label';lbl.textContent='参照:';row.appendChild(lbl);
   for(const{ref,type,label}of allRefs){
-    const enabled=ex.refConfig[ref.id]!==false;
+    const enabled=refOn(ex,ref);
     const btn=document.createElement('button');
     btn.className=`expr-ref-toggle ${type} ${enabled?'on':'off'}`;
     btn.title=`${type==='vibe'?'バイブス':type==='precise'?'精密参照':'img2img'} ${label}（クリックで切替）`;
@@ -278,7 +278,7 @@ export function renderExprThumbs(exprId){
     d.querySelector('.adopt').onclick=async()=>{const r=await adoptImage(im.id);if(r==='cleared')toast('採用を取り消しました');};
     d.querySelector('.hold').onclick=()=>holdImage(im.id);
     d.querySelector('.use-ref').onclick=()=>addRefFromBlob(im.blob,'precise');
-    d.querySelector('.use-i2i').onclick=()=>addI2iFromBlob(im.blob);
+    d.querySelector('.use-i2i').onclick=()=>addI2iFromBlob(im.blob,false,im.exprId);
     d.querySelector('.rm').onclick=()=>{if(confirm('この候補を削除します。よろしいですか？'))deleteImage(im.id);};
     // the whole menu opens at the cursor, instead of aiming at the small hover buttons
     d.addEventListener('contextmenu',e=>{e.preventDefault();openThumbMenu(im,e.clientX,e.clientY);});

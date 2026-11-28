@@ -122,6 +122,7 @@
         <button class="bulk-ref" data-kind="i2i" data-on="0">全表情でオフ</button>
       </div>
       <div class="ref-cards" id="i2iCards"></div>
+      <label class="i2i-scope" title="オフにすると、生成画像から送った元画像も全表情でオンになります（従来の動作）"><input type="checkbox" id="chkI2iSourceOnly"> 生成画像から i2i に送ったときは、その画像の表情だけでオンにする</label>
       <p class="hint">元画像をもとに再生成します。Strength が高いほど元画像から離れ、Noise で追加ノイズを調整します。表情ごとにオン・オフでき、オンの表情では先頭の 1 枚が使われます。元画像は生成サイズに合わせて自動で拡大縮小し、はみ出した部分は中央を基準に切り取ります。「🎨 ペイント」で色を描き込むと、その色をヒントに img2img できます（涙の水色など）。「🩹 マスク」で範囲を塗ると、そこだけを描き直すインペイントになります。両方を組み合わせることもできます（どちらも Anlas を消費します）。</p>
     </div>
   </fieldset>
