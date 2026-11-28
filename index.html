@@ -437,14 +437,18 @@
       <div class="seg"><button id="modePaint" title="ペイント (P)">🎨 ペイント <kbd>P</kbd></button><button id="modeMask" title="インペイント用マスク (M)">🩹 マスク <kbd>M</kbd></button></div>
       <button id="maskBrush" title="ブラシ (B)">🖌 ブラシ <kbd>B</kbd></button>
       <button id="maskEraser" title="消しゴム (E)／右ドラッグでも消せます">⌫ 消しゴム <kbd>E</kbd></button>
+      <button id="maskLasso" title="投げ縄 (L)：囲んだ範囲を塗りつぶし／右ドラッグで囲んだ範囲を消去">➰ 投げ縄 <kbd>L</kbd></button>
       <label class="mask-size">太さ <input type="range" id="maskSize" min="1" max="512" step="1"> <span id="maskSizeVal"></span></label>
       <button id="maskUndo" title="元に戻す (Ctrl+Z)">↶ 戻す</button>
+      <button id="maskRedo" title="やり直す (Ctrl+Y / Ctrl+Shift+Z)">↷ やり直す</button>
       <span id="maskOnlyTools"><button id="maskInvert" title="塗りを反転 (I)">反転</button></span>
       <button id="maskClear" title="今のモードの描き込みを全部消す">全消去</button>
     </div>
     <div class="mask-tools" id="paintTools">
       <span id="paintSwatches" class="swatches"></span>
       <input type="color" id="paintColor" title="色を選ぶ（Alt+クリックで画像から拾う）">
+      <button id="paintPicker" title="スポイト (I)：画像の色を拾う（Alt+クリックでも拾えます）">💧 スポイト <kbd>I</kbd></button>
+      <span id="paintRecent" class="swatches recent" title="最近使った色"></span>
       <label class="mask-size">不透明度 <input type="range" id="paintAlpha" min="5" max="100" value="70"> <span id="paintAlphaVal">70%</span></label>
       <label class="mask-size">ぼかし <input type="range" id="paintSoft" min="0" max="100" value="30"> <span id="paintSoftVal">30%</span></label>
       <label class="mask-size chk"><input type="checkbox" id="paintToMask"> 描いた所をマスクにも追加</label>
@@ -457,13 +461,18 @@
       <label class="mask-size">レイヤー不透明度 <input type="range" id="layerOpacity" min="0" max="100" value="100"> <span id="layerOpacityVal">100%</span></label>
     </div>
     <p class="hint" id="maskModeHint"></p>
-    <div class="mask-stage" id="maskStage">
-      <img id="maskImage" alt="" draggable="false">
-      <canvas id="strokeCanvas"></canvas>
-      <canvas id="maskCanvas"></canvas>
+    <div class="mask-view" id="maskView">
+      <div class="mask-stage" id="maskStage">
+        <img id="maskImage" alt="" draggable="false">
+        <canvas id="strokeCanvas"></canvas>
+        <canvas id="maskCanvas"></canvas>
+      </div>
       <div class="mask-cursor" id="maskCursor"></div>
+      <div class="zoom-ctl">
+        <button id="zoomOut" title="縮小 (-)">−</button><button id="zoomVal" title="クリックで全体表示 (0)／100% は (1)">100%</button><button id="zoomIn" title="拡大 (+)">＋</button>
+      </div>
     </div>
-    <p class="hint">右ドラッグで消去／<kbd>[</kbd> <kbd>]</kbd> または Ctrl+ホイールで太さ変更／ペイントは元画像とは別のレイヤーに保存され、送信時だけ表示中のレイヤーを合成します</p>
+    <p class="hint">ホイールで拡大縮小／Space＋ドラッグ・中ボタンドラッグ・画像の外をドラッグで移動／<kbd>0</kbd> 全体表示 <kbd>1</kbd> 100%／右ドラッグで消去／Shift+クリックで前の点から直線／<kbd>[</kbd> <kbd>]</kbd> または Ctrl+ホイールで太さ変更／ペイントは元画像とは別のレイヤーに保存され、送信時だけ表示中のレイヤーを合成します</p>
     <div class="btnrow"><button id="maskCancel">キャンセル <kbd>Esc</kbd></button><button id="maskSave" class="primary">保存 <kbd>Ctrl+Enter</kbd></button></div>
   </div>
 </div>
