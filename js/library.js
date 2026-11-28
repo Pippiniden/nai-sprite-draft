@@ -45,9 +45,26 @@ export let lib=(function(){
   }catch(_){}
   return libSeed();
 })();
-export function libSave(){try{localStorage.setItem(LIB_KEY,JSON.stringify(lib));}catch(e){toast('テンプレートの保存に失敗しました: '+e.message,'err');}}
+export function libSave(){try{localStorage.setItem(LIB_KEY,JSON.stringify(lib));}catch(e){toast('テンプレートの保存に失敗しました: '+e.message,'err');}renderSetPicker();}
+
+/* ---- toolbar set picker ----
+   Adds a saved set without opening the library dialog. The select snaps back to its
+   placeholder after each pick, so the same set can be added again. */
+export function renderSetPicker(){
+  const sel=$('#selSetPick');if(!sel)return;
+  sel.innerHTML='<option value="">📚 セットから追加…</option>'+(lib.sets.length
+    ?lib.sets.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}（${s.items.length}）</option>`).join('')
+    :'<option value="" disabled>保存されたセットはありません</option>');
+  sel.value='';
+}
+$('#selSetPick').addEventListener('change',e=>{
+  const set=lib.sets.find(s=>s.id===e.target.value);e.target.value='';
+  if(set)libApplyEntries(set.items);
+});
 export function entryToExpr(en){return deserializeExpr(en);}
 export function exprToEntry(ex){ensureExprShape(ex);return libNormEntry({name:ex.name,variants:ex.variants.map(v=>({label:v.label,prompt:v.prompt})),variantMode:ex.variantMode,neg:ex.neg,suppress:ex.suppress,suppressOn:ex.suppressOn,suppressScope:ex.suppressScope,suppressPartial:ex.suppressPartial});}
+
+renderSetPicker();
 
 /* ---- library UI ---- */
 export let libTab='entry',libEditing=null;
